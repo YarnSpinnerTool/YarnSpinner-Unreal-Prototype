@@ -1,9 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Library/YarnLibraryRegistry.h"
 
 #include "DialogueRunner.h"
+#include "YarnSubsystem.h"
 #include "Library/YarnCommandLibrary.h"
 #include "Library/YarnFunctionLibrary.h"
 #include "Library/YarnSpinnerLibraryData.h"
@@ -409,7 +410,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Number.EqualTo called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::NUMBER || Params[1].GetType() != Yarn::Value::ValueType::NUMBER)
+            if (!Params[0].IsNumber() || !Params[1].IsNumber())
             {
                 YS_WARN("Number.EqualTo called with incorrect parameter types (expected NUMBER, NUMBER).")
                 return Yarn::Value();
@@ -426,7 +427,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Number.NotEqualTo called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::NUMBER || Params[1].GetType() != Yarn::Value::ValueType::NUMBER)
+            if (!Params[0].IsNumber() || !Params[1].IsNumber())
             {
                 YS_WARN("Number.NotEqualTo called with incorrect parameter types (expected NUMBER, NUMBER).")
                 return Yarn::Value();
@@ -443,7 +444,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Number.Add called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::NUMBER || Params[1].GetType() != Yarn::Value::ValueType::NUMBER)
+            if (!Params[0].IsNumber() || !Params[1].IsNumber())
             {
                 YS_WARN("Number.Add called with incorrect parameter types (expected NUMBER, NUMBER).")
                 return Yarn::Value();
@@ -460,7 +461,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Number.Minus called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::NUMBER || Params[1].GetType() != Yarn::Value::ValueType::NUMBER)
+            if (!Params[0].IsNumber() || !Params[1].IsNumber())
             {
                 YS_WARN("Number.Minus called with incorrect parameter types (expected NUMBER, NUMBER).")
                 return Yarn::Value();
@@ -477,7 +478,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Number.Divide called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::NUMBER || Params[1].GetType() != Yarn::Value::ValueType::NUMBER)
+            if (!Params[0].IsNumber() || !Params[1].IsNumber())
             {
                 YS_WARN("Number.Divide called with incorrect parameter types (expected NUMBER, NUMBER).")
                 return Yarn::Value();
@@ -494,7 +495,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Number.Multiply called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::NUMBER || Params[1].GetType() != Yarn::Value::ValueType::NUMBER)
+            if (!Params[0].IsNumber() || !Params[1].IsNumber())
             {
                 YS_WARN("Number.Multiply called with incorrect parameter types (expected NUMBER, NUMBER).")
                 return Yarn::Value();
@@ -511,7 +512,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Number.Modulo called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::NUMBER || Params[1].GetType() != Yarn::Value::ValueType::NUMBER)
+            if (!Params[0].IsNumber() || !Params[1].IsNumber())
             {
                 YS_WARN("Number.Modulo called with incorrect parameter types (expected NUMBER, NUMBER).")
                 return Yarn::Value();
@@ -528,7 +529,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Number.UnaryMinus called with incorrect number of parameters (expected 1).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::NUMBER)
+            if (!Params[0].IsNumber())
             {
                 YS_WARN("Number.UnaryMinus called with incorrect parameter types (expected NUMBER).")
                 return Yarn::Value();
@@ -545,7 +546,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Number.GreaterThan called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::NUMBER || Params[1].GetType() != Yarn::Value::ValueType::NUMBER)
+            if (!Params[0].IsNumber() || !Params[1].IsNumber())
             {
                 YS_WARN("Number.GreaterThan called with incorrect parameter types (expected NUMBER, NUMBER).")
                 return Yarn::Value();
@@ -562,7 +563,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Number.GreaterThanOrEqualTo called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::NUMBER || Params[1].GetType() != Yarn::Value::ValueType::NUMBER)
+            if (!Params[0].IsNumber() || !Params[1].IsNumber())
             {
                 YS_WARN("Number.GreaterThanOrEqualTo called with incorrect parameter types (expected NUMBER, NUMBER).")
                 return Yarn::Value();
@@ -579,7 +580,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Number.LessThan called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::NUMBER || Params[1].GetType() != Yarn::Value::ValueType::NUMBER)
+            if (!Params[0].IsNumber() || !Params[1].IsNumber())
             {
                 YS_WARN("Number.LessThan called with incorrect parameter types (expected NUMBER, NUMBER).")
                 return Yarn::Value();
@@ -596,7 +597,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Number.LessThanOrEqualTo called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::NUMBER || Params[1].GetType() != Yarn::Value::ValueType::NUMBER)
+            if (!Params[0].IsNumber() || !Params[1].IsNumber())
             {
                 YS_WARN("Number.LessThanOrEqualTo called with incorrect parameter types (expected NUMBER, NUMBER).")
                 return Yarn::Value();
@@ -613,7 +614,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Bool.EqualTo called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::BOOL || Params[1].GetType() != Yarn::Value::ValueType::BOOL)
+            if (!Params[0].IsBoolean() || !Params[1].IsBoolean())
             {
                 YS_WARN("Bool.EqualTo called with incorrect parameter types (expected BOOL, BOOL).")
                 return Yarn::Value();
@@ -630,7 +631,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
                 YS_WARN("Bool.NotEqualTo called with incorrect number of parameters (expected 2).")
                 return Yarn::Value();
             }
-            if (Params[0].GetType() != Yarn::Value::ValueType::BOOL || Params[1].GetType() != Yarn::Value::ValueType::BOOL)
+            if (!Params[0].IsBoolean() || !Params[1].IsBoolean())
             {
                 YS_WARN("Bool.NotEqualTo called with incorrect parameter types (expected BOOL, BOOL).")
                 return Yarn::Value();
@@ -642,7 +643,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
     AddStdFunction({
         TEXT("Bool.And"), 2, [](TArray<Yarn::Value> Params) -> Yarn::Value
         {
-            if (Params.Num() != 2 || Params[0].GetType() != Yarn::Value::ValueType::BOOL || Params[1].GetType() != Yarn::Value::ValueType::BOOL)
+            if (Params.Num() != 2 || !Params[0].IsBoolean() || !Params[1].IsBoolean())
             {
                 YS_WARN("Bool.And called with incorrect number of parameters (expected 2) or incorrect parameter types (expected BOOL, BOOL).")
                 return Yarn::Value();
@@ -654,7 +655,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
     AddStdFunction({
         TEXT("Bool.Or"), 2, [](TArray<Yarn::Value> Params) -> Yarn::Value
         {
-            if (Params.Num() != 2 || Params[0].GetType() != Yarn::Value::ValueType::BOOL || Params[1].GetType() != Yarn::Value::ValueType::BOOL)
+            if (Params.Num() != 2 || !Params[0].IsBoolean() || !Params[1].IsBoolean())
             {
                 YS_WARN("Bool.Or called with incorrect number of parameters (expected 2) or incorrect parameter types (expected BOOL, BOOL).")
                 return Yarn::Value();
@@ -666,7 +667,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
     AddStdFunction({
         TEXT("Bool.Xor"), 2, [](TArray<Yarn::Value> Params) -> Yarn::Value
         {
-            if (Params.Num() != 2 || Params[0].GetType() != Yarn::Value::ValueType::BOOL || Params[1].GetType() != Yarn::Value::ValueType::BOOL)
+            if (Params.Num() != 2 || !Params[0].IsBoolean() || !Params[1].IsBoolean())
             {
                 YS_WARN("Bool.Xor called with incorrect number of parameters (expected 2) or incorrect parameter types (expected BOOL, BOOL).")
                 return Yarn::Value();
@@ -678,7 +679,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
     AddStdFunction({
         TEXT("Bool.Not"), 1, [](TArray<Yarn::Value> Params) -> Yarn::Value
         {
-            if (Params.Num() != 1 || Params[0].GetType() != Yarn::Value::ValueType::BOOL)
+            if (Params.Num() != 1 || !Params[0].IsBoolean())
             {
                 YS_WARN("Bool.Not called with incorrect number of parameters (expected 1) or incorrect parameter types (expected BOOL).")
                 return Yarn::Value();
@@ -690,7 +691,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
     AddStdFunction({
         TEXT("String.EqualTo"), 2, [](TArray<Yarn::Value> Params) -> Yarn::Value
         {
-            if (Params.Num() != 2 || Params[0].GetType() != Yarn::Value::ValueType::STRING || Params[1].GetType() != Yarn::Value::ValueType::STRING)
+            if (Params.Num() != 2 || !Params[0].IsString() || !Params[1].IsString())
             {
                 YS_WARN("String.EqualTo called with incorrect number of parameters (expected 2) or incorrect parameter types (expected STRING, STRING).")
                 return Yarn::Value();
@@ -702,7 +703,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
     AddStdFunction({
         TEXT("String.NotEqualTo"), 2, [](TArray<Yarn::Value> Params) -> Yarn::Value
         {
-            if (Params.Num() != 2 || Params[0].GetType() != Yarn::Value::ValueType::STRING || Params[1].GetType() != Yarn::Value::ValueType::STRING)
+            if (Params.Num() != 2 || !Params[0].IsString() || !Params[1].IsString())
             {
                 YS_WARN("String.NotEqualTo called with incorrect number of parameters (expected 2) or incorrect parameter types (expected STRING, STRING).")
                 return Yarn::Value();
@@ -714,7 +715,7 @@ void UYarnLibraryRegistry::LoadStdFunctions()
     AddStdFunction({
         TEXT("String.Add"), 2, [](TArray<Yarn::Value> Params) -> Yarn::Value
         {
-            if (Params.Num() != 2 || Params[0].GetType() != Yarn::Value::ValueType::STRING || Params[1].GetType() != Yarn::Value::ValueType::STRING)
+            if (Params.Num() != 2 || !Params[0].IsString() || !Params[1].IsString())
             {
                 YS_WARN("String.Add called with incorrect number of parameters (expected 2) or incorrect parameter types (expected STRING, STRING).")
                 return Yarn::Value();
@@ -747,9 +748,47 @@ void UYarnLibraryRegistry::LoadStdFunctions()
         }
     });
 
-    // missing:
-    // format_invariant
-    // ...
+    AddStdFunction({
+        TEXT("visited"), 1, [](TArray<Yarn::Value> Params) -> Yarn::Value
+        {
+            if (Params.Num() != 1 || !Params[0].IsString())
+            {
+                YS_WARN("visited called with incorrect number of parameters (expected 1) or incorrect parameter types (expected STRING).")
+                return Yarn::Value();
+            }
+
+            const std::string VariableName = Yarn::Library::GenerateUniqueVisitedVariableForNode(
+                Params[0].GetStringValue());
+            UYarnSubsystem* const YarnSubsystem = UYarnSubsystem::Get();
+            if (YarnSubsystem && YarnSubsystem->HasValue(VariableName))
+            {
+                return Yarn::Value(YarnSubsystem->GetValue(VariableName).GetNumberValue() > 0);
+            }
+
+            return Yarn::Value(false);
+        }
+    });
+
+    AddStdFunction({
+        TEXT("visited_count"), 1, [](TArray<Yarn::Value> Params) -> Yarn::Value
+        {
+            if (Params.Num() != 1 || !Params[0].IsString())
+            {
+                YS_WARN("visited_count called with incorrect number of parameters (expected 1) or incorrect parameter types (expected STRING).")
+                return Yarn::Value();
+            }
+
+            const std::string VariableName = Yarn::Library::GenerateUniqueVisitedVariableForNode(
+                Params[0].GetStringValue());
+            UYarnSubsystem* const YarnSubsystem = UYarnSubsystem::Get();
+            if (YarnSubsystem && YarnSubsystem->HasValue(VariableName))
+            {
+                return Yarn::Value(YarnSubsystem->GetValue(VariableName));
+            }
+
+            return Yarn::Value(0.0);
+        }
+    });
 }
 
 

@@ -4,15 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Library/YarnLibraryRegistry.h"
-#include "AssetRegistry/ARFilter.h"
-#include "AssetRegistry/AssetRegistryModule.h"
-
-#include "YarnProject.h"
-#include "Engine/DataTable.h"
 #include "Engine/ObjectLibrary.h"
 #include "YarnSpinnerCore/VirtualMachine.h"
-
 #include "YarnSubsystem.generated.h"
+
 
 /**
  * 
@@ -23,25 +18,24 @@ class YARNSPINNER_API UYarnSubsystem : public UGameInstanceSubsystem, public Yar
     GENERATED_BODY()
 public:
     UYarnSubsystem();
-    
+
+    static UYarnSubsystem* Get();
+
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;
 
-    virtual void SetValue(std::string name, bool value);
-    virtual void SetValue(std::string name, float value);
-    virtual void SetValue(std::string name, std::string value);
+    virtual void SetValue(std::string name, bool value) override;
+    virtual void SetValue(std::string name, float value) override;
+    virtual void SetValue(std::string name, std::string value) override;
 
-    virtual bool HasValue(std::string name);
-    virtual Yarn::Value GetValue(std::string name);
+    virtual bool HasValue(std::string name) override;
+    virtual Yarn::Value GetValue(std::string name) override;
 
-    virtual void ClearValue(std::string name);
+    virtual void ClearValue(std::string name) override;
 
     const UYarnLibraryRegistry* GetYarnLibraryRegistry() const { return YarnFunctionRegistry; }
 
 private:
-    // UPROPERTY()
-    // TMap<UYarnProjectAsset*, TMap<FName, UDataTable*>> LocTextDataTables;
-
     UPROPERTY()
     UYarnLibraryRegistry* YarnFunctionRegistry;
 
@@ -55,7 +49,7 @@ private:
     FDelegateHandle OnAssetRegistryFilesLoadedHandle;
     FDelegateHandle OnLevelAddedToWorldHandle;
     FDelegateHandle OnWorldInitializedActorsHandle;
-    
 };
+
 
 

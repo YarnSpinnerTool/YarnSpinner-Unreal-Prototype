@@ -9,7 +9,7 @@ class FYarnValueHelpers
 public:
     static FString GetTypeString(const Yarn::Value& Value)
     {
-        return Value.GetType() == Yarn::Value::STRING ? "string" : (Value.GetType() == Yarn::Value::NUMBER ? "number" : "boolean");
+        return Value.IsString() ? TEXT("string") : (Value.IsNumber() ? TEXT("number") : TEXT("boolean"));
     }
 };
 

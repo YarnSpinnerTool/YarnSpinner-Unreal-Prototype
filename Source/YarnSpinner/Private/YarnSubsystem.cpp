@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "YarnSubsystem.h"
@@ -132,6 +132,17 @@ Yarn::Value UYarnSubsystem::GetValue(std::string name)
 void UYarnSubsystem::ClearValue(std::string name)
 {
     Variables.Remove(FString(UTF8_TO_TCHAR(name.c_str())));
+}
+
+
+UYarnSubsystem* UYarnSubsystem::Get()
+{
+    if (!GEngine || !GEngine->GetWorld() || !GEngine->GetWorld()->GetGameInstance())
+    {
+        YS_WARN("Could not retrieve YarnSubsystem without a game instance")
+        return nullptr;
+    }
+    return GEngine->GetWorld()->GetGameInstance()->GetSubsystem<UYarnSubsystem>();
 }
 
 

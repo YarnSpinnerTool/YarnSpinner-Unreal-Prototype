@@ -40,6 +40,21 @@ namespace Yarn
             return this->type;
         }
 
+        bool IsString() const
+        {
+            return GetType() == STRING;
+        }
+
+        bool IsNumber() const
+        {
+            return GetType() == NUMBER;
+        }
+
+        bool IsBoolean() const
+        {
+            return GetType() == BOOL;
+        }
+
         const std::string GetStringValue()
         {
             if (this->type == STRING)
