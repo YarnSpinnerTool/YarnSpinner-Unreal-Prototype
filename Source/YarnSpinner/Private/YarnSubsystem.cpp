@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "YarnSubsystem.h"
@@ -18,7 +18,6 @@ UYarnSubsystem::UYarnSubsystem()
 {
     YS_LOG_FUNCSIG
 
-    // TODO: move to editor?
     YarnFunctionObjectLibrary = UObjectLibrary::CreateLibrary(UYarnFunctionLibrary::StaticClass(), true, true);
     YarnCommandObjectLibrary = UObjectLibrary::CreateLibrary(UYarnCommandLibrary::StaticClass(), true, true);
     YarnFunctionObjectLibrary->AddToRoot();
@@ -37,12 +36,11 @@ void UYarnSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     YS_LOG_FUNCSIG
     Super::Initialize(Collection);
 
-
     TArray<TSubclassOf<UYarnFunctionLibrary>> LibRefs;
     TArray<FAssetData> Blueprints;
 
     FARFilter Filter;
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
     Filter.ClassPaths.Add(UBlueprint::StaticClass()->GetClassPathName());
     Filter.ClassPaths.Add(UBlueprintGeneratedClass::StaticClass()->GetClassPathName());
 #else

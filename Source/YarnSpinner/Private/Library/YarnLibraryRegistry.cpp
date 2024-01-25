@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Library/YarnLibraryRegistry.h"
@@ -261,7 +261,7 @@ void UYarnLibraryRegistry::FindFunctionsAndCommands()
 void UYarnLibraryRegistry::AddFunction(const FYSLSAction& Func)
 {
     // Find the blueprint
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     auto Asset = FAssetRegistryModule::GetRegistry().GetAssetByObjectPath(FSoftObjectPath(Func.FileName));
 #else
     auto Asset = FAssetRegistryModule::GetRegistry().GetAssetByObjectPath(FName(Func.FileName));
@@ -323,7 +323,7 @@ void UYarnLibraryRegistry::AddCommand(const FYSLSAction& Cmd)
 {
     YS_LOG_FUNCSIG
     // Find the blueprint
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     auto Asset = FAssetRegistryModule::GetRegistry().GetAssetByObjectPath(FSoftObjectPath(Cmd.FileName));
 #else
     auto Asset = FAssetRegistryModule::GetRegistry().GetAssetByObjectPath(FName(Cmd.FileName));
