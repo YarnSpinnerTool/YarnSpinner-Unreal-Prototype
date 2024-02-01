@@ -43,8 +43,8 @@ void UYarnSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
     FARFilter Filter;
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 3
-    Filter.ClassPaths.Add(UBlueprint::StaticClass());
-    Filter.ClassPaths.Add(UBlueprintGeneratedClass::StaticClass()->GetFName());
+    Filter.ClassPaths.Add(UBlueprint::StaticClass()->GetClassPathName());
+    Filter.ClassPaths.Add(UBlueprintGeneratedClass::StaticClass()->GetClassPathName());
 #else
     Filter.ClassNames.Add(UBlueprint::StaticClass()->GetFName());
     Filter.ClassNames.Add(UBlueprintGeneratedClass::StaticClass()->GetFName());
