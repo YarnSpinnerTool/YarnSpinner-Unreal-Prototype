@@ -26,6 +26,14 @@
 			"LoadingPhase": "PostEngineInit",
 			"AdditionalDependencies": [
 				"Engine"
+			],
+			"WhitelistPlatforms": [
+				"Mac",
+				"Win64"
+			],
+			"PlatformAllowList": [
+				"Mac",
+				"Win64"
 			]
 		}
 	]
