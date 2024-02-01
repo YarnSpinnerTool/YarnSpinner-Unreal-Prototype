@@ -65,12 +65,12 @@ namespace Yarn
 
         ExecutionState executionState;
 
-        Library &library;
+        // Library &library;
         ILogger &logger;
         IVariableStorage &variableStorage;
 
     public:
-        VirtualMachine(Yarn::Program program, Library &library, IVariableStorage &variableStorage, ILogger &logger);
+        VirtualMachine(Yarn::Program program, /*Library &library,*/ IVariableStorage &variableStorage, ILogger &logger);
         ~VirtualMachine();
 
         void SetProgram(Yarn::Program program);

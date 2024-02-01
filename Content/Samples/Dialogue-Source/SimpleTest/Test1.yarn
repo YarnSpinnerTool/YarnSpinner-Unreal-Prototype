@@ -2,6 +2,7 @@ title: Start
 ---
 
 A: Hey, here's a line! #line:test1_1
+<<do_something_cool param1 param2>>
 B: Here's another line! #line:test1_2
 
 [float height=4]Here's [wave]a[/float] line [shake]with[/shake] lots of[/] markup. #line:test1_markup1
@@ -14,9 +15,12 @@ Here's a line with escaped \[brackets\]. #line:test1_markup2
 -> Cool! #line:test1_5
     B: Yeah! #line:test1_6
 -> Neat! #line:test1_7
-    A: I know! #line:test1_8
+    A: I know! #line:test1_8 
 -> This is confusing, give me a sec to think.
     <<wait 5>>
+
+Have we visited line:test1_1? {visited("#line:test1_1")} {visited("line:test1_1")} {visited("test1_1")} #line:test1_testvisited
+Visited counts: {visited_count("#line:test1_1")} {visited_count("line:test1_1")} {visited_count("test1_1")} #line:test1_testvisitedcount
 
 Ok, onto the next section... #line:test1_whatever
 
@@ -29,7 +33,7 @@ title: Variables
 
 <<declare $explainCount = 1>>
 
-Ok, listen up because I'm only going to say this {$explainCount} {$explainCount}|plural(one=time,other=times): you can use *variables* in your Yarn scripts! #line:test1_9
+{visited("line:test1_9")} Ok, listen up because I'm only going to say this {$explainCount} {$explainCount}|plural(one=time,other=times): you can use *variables* in your Yarn scripts! #line:test1_9
 -> Sorry, could you please repeat that? #line:test1_10
     // Had to add the following line because the current runner needs the user to press "Continue" for *every* line, including commands.
     Ughh... fine. #line:test1_11

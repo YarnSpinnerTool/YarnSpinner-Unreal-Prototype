@@ -101,19 +101,25 @@ void UYarnSubsystem::Deinitialize()
 
 void UYarnSubsystem::SetValue(std::string name, bool value)
 {
+    YS_LOG("Setting variable '%s' to '%s'", UTF8_TO_TCHAR(name.c_str()), value ? "true" : "false")
     Variables.FindOrAdd(FString(UTF8_TO_TCHAR(name.c_str()))) = Yarn::Value(value);
+    LogVariables();
 }
 
 
 void UYarnSubsystem::SetValue(std::string name, float value)
 {
+    YS_LOG("Setting variable '%s' to '%f'", UTF8_TO_TCHAR(name.c_str()), value)
     Variables.FindOrAdd(FString(UTF8_TO_TCHAR(name.c_str()))) = Yarn::Value(value);
+    LogVariables();
 }
 
 
 void UYarnSubsystem::SetValue(std::string name, std::string value)
 {
+    YS_LOG("Setting variable '%s' to '%s'", UTF8_TO_TCHAR(name.c_str()), UTF8_TO_TCHAR(value.c_str()))
     Variables.FindOrAdd(FString(UTF8_TO_TCHAR(name.c_str()))) = Yarn::Value(value);
+    LogVariables();
 }
 
 
@@ -131,18 +137,33 @@ Yarn::Value UYarnSubsystem::GetValue(std::string name)
 
 void UYarnSubsystem::ClearValue(std::string name)
 {
+    YS_LOG("Clearing variable '%s'", UTF8_TO_TCHAR(name.c_str()))
     Variables.Remove(FString(UTF8_TO_TCHAR(name.c_str())));
+    LogVariables();
+}
+
+void UYarnSubsystem::LogVariables()
+{
+    YS_LOG("Yarn variables: ")
+    FString VariablesString;
+    for (auto Var : Variables)
+    {
+        FString Val = UTF8_TO_TCHAR(Var.Value.ConvertToString().c_str());
+        VariablesString += FString::Printf(TEXT("    %s: %s,\n"), *Var.Key, *Val);
+    }
+    YS_LOG_CLEAN("%s", *VariablesString);
 }
 
 
 UYarnSubsystem* UYarnSubsystem::Get()
 {
-    if (!GEngine || !GEngine->GetWorld() || !GEngine->GetWorld()->GetGameInstance())
+    UWorld* World = (GEngine && GEngine->GetWorld() ? GEngine->GetWorld() : GWorld);
+    if (!World || ! World->GetGameInstance())
     {
-        YS_WARN("Could not retrieve YarnSubsystem without a game instance")
+        YS_WARN("Could not retrieve the GameInstance to access YarnSubsystem")
         return nullptr;
     }
-    return GEngine->GetWorld()->GetGameInstance()->GetSubsystem<UYarnSubsystem>();
+    return World->GetGameInstance()->GetSubsystem<UYarnSubsystem>();
 }
 
 

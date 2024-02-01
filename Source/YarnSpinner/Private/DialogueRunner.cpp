@@ -49,10 +49,14 @@ void ADialogueRunner::PreInitializeComponents()
     // Create the Library
     Library = TUniquePtr<Yarn::Library>(new Yarn::Library(*this));
 
+    UYarnSubsystem* SS = YarnSubsystem();
+
+
     // Create the VirtualMachine, supplying it with the loaded Program and
     // configuring it to use our library, plus use this ADialogueRunner as the
     // logger and the variable storage
-    VirtualMachine = TUniquePtr<Yarn::VirtualMachine>(new Yarn::VirtualMachine(Program, *(Library), *this, *this));
+    // VirtualMachine = TUniquePtr<Yarn::VirtualMachine>(new Yarn::VirtualMachine(Program, *(Library), *this, *this));
+    VirtualMachine = TUniquePtr<Yarn::VirtualMachine>(new Yarn::VirtualMachine(Program, *this, *this));
 
     VirtualMachine->LineHandler = [this](Yarn::Line& Line)
     {

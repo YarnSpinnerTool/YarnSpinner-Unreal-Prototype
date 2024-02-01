@@ -11,51 +11,51 @@
 
 namespace Yarn
 {
-    VirtualMachine::VirtualMachine(Yarn::Program program, Library& library, IVariableStorage& variableStorage, ILogger& logger)
+    VirtualMachine::VirtualMachine(Yarn::Program program, /*Library& library,*/ IVariableStorage& variableStorage, ILogger& logger)
         : program(program),
           state(State()),
           executionState(STOPPED),
-          library(library),
+          // library(library),
           logger(logger),
           variableStorage(variableStorage)
     {
-        // Add the 'visited' and 'visited_count' functions, which query the variable
-        // storage for information about how many times a node has been visited.
-        library.AddFunction<bool>(
-            "visited",
-            [&variableStorage](std::vector<Value> values)
-            {
-                std::string nodeName = values.at(0).GetStringValue();
-                std::string visitTrackingVariable = Library::GenerateUniqueVisitedVariableForNode(nodeName);
-                if (variableStorage.HasValue(visitTrackingVariable))
-                {
-                    int visitCount = variableStorage.GetValue(visitTrackingVariable).GetNumberValue();
-                    return visitCount > 0;
-                }
-                else
-                {
-                    return false;
-                }
-            },
-            1);
-
-        library.AddFunction<float>(
-            "visited_count",
-            [&variableStorage](std::vector<Value> values)
-            {
-                std::string nodeName = values.at(0).GetStringValue();
-                std::string visitTrackingVariable = Library::GenerateUniqueVisitedVariableForNode(nodeName);
-                if (variableStorage.HasValue(visitTrackingVariable))
-                {
-                    int visitCount = (int)variableStorage.GetValue(visitTrackingVariable).GetNumberValue();
-                    return visitCount;
-                }
-                else
-                {
-                    return 0;
-                }
-            },
-            1);
+        // // Add the 'visited' and 'visited_count' functions, which query the variable
+        // // storage for information about how many times a node has been visited.
+        // library.AddFunction<bool>(
+        //     "visited",
+        //     [&variableStorage](std::vector<Value> values)
+        //     {
+        //         std::string nodeName = values.at(0).GetStringValue();
+        //         std::string visitTrackingVariable = Library::GenerateUniqueVisitedVariableForNode(nodeName);
+        //         if (variableStorage.HasValue(visitTrackingVariable))
+        //         {
+        //             int visitCount = variableStorage.GetValue(visitTrackingVariable).GetNumberValue();
+        //             return visitCount > 0;
+        //         }
+        //         else
+        //         {
+        //             return false;
+        //         }
+        //     },
+        //     1);
+        //
+        // library.AddFunction<float>(
+        //     "visited_count",
+        //     [&variableStorage](std::vector<Value> values)
+        //     {
+        //         std::string nodeName = values.at(0).GetStringValue();
+        //         std::string visitTrackingVariable = Library::GenerateUniqueVisitedVariableForNode(nodeName);
+        //         if (variableStorage.HasValue(visitTrackingVariable))
+        //         {
+        //             int visitCount = (int)variableStorage.GetValue(visitTrackingVariable).GetNumberValue();
+        //             return visitCount;
+        //         }
+        //         else
+        //         {
+        //             return 0;
+        //         }
+        //     },
+        //     1);
     }
 
 

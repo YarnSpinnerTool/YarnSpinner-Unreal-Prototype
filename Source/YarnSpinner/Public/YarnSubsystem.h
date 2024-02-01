@@ -49,6 +49,8 @@ private:
     FDelegateHandle OnAssetRegistryFilesLoadedHandle;
     FDelegateHandle OnLevelAddedToWorldHandle;
     FDelegateHandle OnWorldInitializedActorsHandle;
+
+    void LogVariables();
 };
 
 
