@@ -68,19 +68,45 @@ TArray<TSoftObjectPtr<UObject>> UYarnProject::GetLineAssets(const FName Name)
 
 
 #if WITH_EDITORONLY_DATA
+void UYarnProject::GetAssetRegistryTags(TArray<FAssetRegistryTag>& OutTags) const
+{
+	if (AssetImportData)
+	{
+		OutTags.Add(FAssetRegistryTag(SourceFileTagName(), AssetImportData->GetSourceData().ToJson(), FAssetRegistryTag::TT_Hidden));
+	}
+
+	Super::GetAssetRegistryTags(OutTags);
+}
+#endif
 
 
 void UYarnProject::PostInitProperties()
 {
-	if (!HasAnyFlags(RF_ClassDefaultObject))
+#if WITH_EDITORONLY_DATA
+
+	if (!HasAnyFlags(RF_ClassDefaultObject | RF_NeedLoad))
 	{
 		AssetImportData = NewObject<UAssetImportData>(this, TEXT("AssetImportData"));
 	}
-
+#endif
 	Super::PostInitProperties();
 }
 
 
+void UYarnProject::PostLoad()
+{
+	Super::PostLoad();
+
+#if WITH_EDITORONLY_DATA
+	if (AssetImportData == nullptr)
+	{
+		AssetImportData = NewObject<UAssetImportData>(this, TEXT("AssetImportData"));
+	}
+#endif
+}
+
+
+#if WITH_EDITORONLY_DATA
 void UYarnProject::SetYarnSources(const TArray<FString>& NewYarnSources)
 {
 	const FString ProjectPath = YarnProjectPath();
@@ -105,8 +131,10 @@ void UYarnProject::SetYarnSources(const TArray<FString>& NewYarnSources)
 		YS_LOG("--> set source file %s - %s - %s", *SourceFile, *YarnFiles.FindChecked(SourceFile).Timestamp.ToString(), *YarnFiles.FindChecked(SourceFile).FileHash);
 	}
 }
+#endif
 
 
+#if WITH_EDITORONLY_DATA
 bool UYarnProject::ShouldRecompile(const TArray<FString>& LatestYarnSources) const
 {
 	const FString ProjectPath = YarnProjectPath();
@@ -159,11 +187,12 @@ bool UYarnProject::ShouldRecompile(const TArray<FString>& LatestYarnSources) con
 	
 	return false;
 }
+#endif
 
 
+#if WITH_EDITORONLY_DATA
 FString UYarnProject::YarnProjectPath() const
 {
 	return FPaths::GetPath(AssetImportData->GetFirstFilename());
 }
-
 #endif
