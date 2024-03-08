@@ -52,7 +52,7 @@ We'll set up the scene so that there's a character you can walk up to and talk t
   - Select it, and in the Details pane, set the Anim Class to ABP_Manny.
   - The character will now be playing an idle animation.
 
-![The Manny character, placed in front of the player start.](Images/manny_added.png)
+![The Manny character, placed in front of the player start.](images/manny_added.png)
 
 - In the Details pane, click Add, and search for the 'AC_Interactable' component you added earlier.
   - Add it to the actor.
@@ -64,7 +64,7 @@ We'll set up the scene so that there's a character you can walk up to and talk t
     - Set the Capsule Half Height to 96.
     - Set the Capsule Radius to 48.
 
-![The capsule set up on the Manny character.](Images/manny_capsule_setup.png)
+![The capsule set up on the Manny character.](images/manny_capsule_setup.png)
 
 ### Create an 'Interact' Input Action
 
