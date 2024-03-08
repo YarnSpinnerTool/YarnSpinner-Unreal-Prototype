@@ -1,6 +1,6 @@
 # Yarn Spinner for Unreal
 
-<img src="https://yarnspinner.dev/img/YarnSpinnerLogo.png" alt="Yarn Spinner logo" width="100px;" align="right">
+<img src="https://downloads.yarnspinner.dev/get/YarnSpinnerLogo.png" alt="Yarn Spinner logo" width="100px;" align="right">
 
 Welcome to **Yarn Spinner for Unreal!** Yarn Spinner is the friendly dialogue tool that makes it easy for writers to create content, and has powerful features for programmers.
 
