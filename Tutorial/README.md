@@ -1,9 +1,9 @@
 ## Prerequisites
 
-- Unreal Engine 5.3
-- Visual Studio Code
-- Yarn Spinner for Visual Studio Code
-- Demo assets
+- [Unreal Engine 5.3](https://www.unrealengine.com/)
+- [Visual Studio Code](https://code.visualstudio.com)
+- [Yarn Spinner for Visual Studio Code]([https://](https://marketplace.visualstudio.com/items?itemName=SecretLab.yarn-spinner))
+- [Demo assets](https://downloads.yarnspinner.dev/get/ue-tutorial/YarnSpinner-Unreal-Tutorial-Assets-20240308.zip)
 
 ## Create the Project
 
@@ -17,7 +17,7 @@
 - Close the Unreal Editor.
 - Open your project's folder in Explorer.
 - Create a new folder called "Plugins".
-- Clone the Yarn Spinner for Unreal repo into the Plugins folder you just created.
+- Clone the [Yarn Spinner for Unreal repo](http://github.com/YarnSpinnerTool/YarnSpinner-Unreal) into the Plugins folder you just created.
 - Open the project again.
   - Unreal Editor will say that the modules YarnSpinner and YarnSpinnerEditor are missing, and ask if you'd like to rebuild them. Choose Yes.
   - Wait for the editor to launch.
