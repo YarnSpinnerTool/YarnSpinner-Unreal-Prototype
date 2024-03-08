@@ -2,7 +2,7 @@
 
 - [Unreal Engine 5.3](https://www.unrealengine.com/)
 - [Visual Studio Code](https://code.visualstudio.com)
-- [Yarn Spinner for Visual Studio Code]([https://](https://marketplace.visualstudio.com/items?itemName=SecretLab.yarn-spinner))
+- [Yarn Spinner for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=SecretLab.yarn-spinner)
 - [Demo assets](https://downloads.yarnspinner.dev/get/ue-tutorial/YarnSpinner-Unreal-Tutorial-Assets-20240308.zip)
 
 ## Create the Project
