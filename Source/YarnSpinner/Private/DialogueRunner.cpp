@@ -280,7 +280,7 @@ void ADialogueRunner::SelectOption(UOption* Option)
 
     VirtualMachine->SetSelectedOption(Option->OptionID);
 
-    if (bRunLinesForSelectedOptions)
+    if (bRunSelectedOptionsAsLines)
     {
         const TArray<TSoftObjectPtr<UObject>> LineAssets = YarnProject->GetLineAssets(Option->Line->LineID);
         YS_LOG_FUNC("Got %d line assets for line '%s'", LineAssets.Num(), *Option->Line->LineID.ToString())
