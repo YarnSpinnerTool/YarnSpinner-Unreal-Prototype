@@ -7,7 +7,7 @@ Welcome to **Yarn Spinner for Unreal!** Yarn Spinner is the friendly dialogue to
 Yarn Spinner for Unity is designed for **Unreal Engine 5.3 and above.** It may work on earlier versions, but our current focus is on 5.3.
 
 > [!IMPORTANT]
-> This plugin is a **beta**. Please see the list of [Known Issues](#caveats). This release is intended to get early feedback from users. **Do not use this plugin in production.**
+> This plugin is a **beta**. Please see the list of [Known Issues](#known-issues). This release is intended to get early feedback from users. **Do not use this plugin in production.**
 
 <img src=".github/assets/Epic_MegaGrants_Recipient_logo.png" alt="Yarn Spinner logo" width="50px;" align="right"> This project's development is supported by an Epic MegaGrant.
 
@@ -39,3 +39,7 @@ Yarn Spinner for Unreal is currently at a beta stage of development, and there a
 ### I get a "Plugin 'YarnSpinner' failed to load because module 'YarnSpinner' could not be found" message when I try to play a build of my game.
 
 If your project was created as a Blueprint Project, then Unreal will not include plugins by default. Add a new empty C++ class (of any type), and rebuild your project.
+
+## Credits
+
+Yarn Spinner for Unreal was developed by Yarn Spinner Pty Ltd, with enormous amounts of help from Ben Phelan.
