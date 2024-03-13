@@ -26,7 +26,7 @@ To get started with Yarn Spinner for Unreal, we have an [end-to-end tutorial](ht
 
 Yarn Spinner for Unreal is currently at a beta stage of development, and there are a number of important caveats to know.
 
-- **Windows support only.** This may extend to additional platforms in a future version.
+- **Windows support only.** Additional platforms will be added in future versions.
 - **In-memory variable storage only.** Variables can be stored and retrieved, but they are not currently stored on disk.
 - **Limited function support.**
   - The following functions are supported: `visited`, `visited_count`, `string`, `number`, `bool`.
