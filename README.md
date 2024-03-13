@@ -13,7 +13,7 @@ Yarn Spinner for Unity is designed for **Unreal Engine 5.3 and above.** It may w
 
 ## Tutorial
 
-To get started with Yarn Spinner for Unreal, we have an end-to-end tutorial available, starting from a blank project and ending with voice-acted interactive conversation!
+To get started with Yarn Spinner for Unreal, we have an [end-to-end tutorial](https://docs.yarnspinner.dev/using-yarnspinner-with-unreal/tutorial) available, starting from a blank project and ending with voice-acted interactive conversation!
 
 ## Installation Instructions
 
