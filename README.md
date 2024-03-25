@@ -4,7 +4,7 @@
 
 Welcome to **Yarn Spinner for Unreal!** Yarn Spinner is the friendly dialogue tool that makes it easy for writers to create content, and has powerful features for programmers.
 
-Yarn Spinner for Unity is designed for **Unreal Engine 5.3 and above.** It may work on earlier versions, but our current focus is on 5.3.
+Yarn Spinner for Unreal is designed for **Unreal Engine 5.3 and above.** It may work on earlier versions, but our current focus is on 5.3.
 
 > [!IMPORTANT]
 > This plugin is a **beta**. Please see the list of [Known Issues](#known-issues). This release is intended to get early feedback from users. **Do not use this plugin in production.**
