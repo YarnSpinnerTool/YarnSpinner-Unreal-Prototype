@@ -101,7 +101,7 @@ void UYarnSubsystem::Deinitialize()
 
 void UYarnSubsystem::SetValue(std::string name, bool value)
 {
-    YS_LOG("Setting variable '%s' to '%s'", UTF8_TO_TCHAR(name.c_str()), value ? "true" : "false")
+    YS_LOG("Setting variable '%s' to '%hs'", UTF8_TO_TCHAR(name.c_str()), value ? "true" : "false")
     Variables.FindOrAdd(FString(UTF8_TO_TCHAR(name.c_str()))) = Yarn::Value(value);
     LogVariables();
 }

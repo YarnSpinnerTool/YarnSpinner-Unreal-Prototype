@@ -377,7 +377,7 @@ void ADialogueRunner::GetDisplayTextForLine(ULine* Line, const Yarn::Line& YarnL
         return;
     }
 
-    const FText LocalisedDisplayText = FText::FromString(FTextLocalizationManager::Get().GetDisplayString({YarnProject->GetName()}, {LineID.ToString()}, nullptr).Get());
+    const FText LocalisedDisplayText = FText::FromString(YarnProject->Lines[LineID]);
 
     const FText NonLocalisedDisplayText = FText::FromString(YarnProject->Lines[LineID]);
 
