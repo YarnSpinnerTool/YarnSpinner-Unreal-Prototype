@@ -1,70 +1,52 @@
-using UnrealBuildTool;
+// copyright yarn spinner pty ltd
+// licensed under the mit license. see license.md in project root
+
 using System.IO;
+using UnrealBuildTool;
 
 public class YarnSpinnerEditor : ModuleRules
 {
-    public YarnSpinnerEditor(ReadOnlyTargetRules Target) : base(Target)
-    {
-        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+	public YarnSpinnerEditor(ReadOnlyTargetRules Target) : base(Target)
+	{
+		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        string YscPath;
+		PublicDependencyModuleNames.AddRange(new string[]
+		{
+			"Core",
+			"YarnSpinner"
+		});
 
-        if (Target.Platform == UnrealTargetPlatform.Mac)
-        {
-            // The protobuf header files use '#if _MSC_VER', but this will
-            // trigger -Wundef. Disable unidentified compiler directive warnings.
-            bEnableUndefinedIdentifierWarnings = false;
+		PrivateDependencyModuleNames.AddRange(new string[]
+		{
+			"CoreUObject",
+			"Engine",
+			"Slate",
+			"SlateCore",
+			"UnrealEd",
+			"AssetTools",
+			"Projects",
+			"Json",
+			"JsonUtilities"
+		});
 
-            YscPath = ToolPath(Target) + "ysc";
-        }
-        else if (Target.Platform == UnrealTargetPlatform.Win64)
-        {
-            YscPath = ToolPath(Target) + "ysc.exe";
-        }
-        else
-        {
-            throw new System.PlatformNotSupportedException("Platform " + Target.Platform +
-                                                           " is not currently supported.");
-        }
+		// define ysc compiler path for use in code
+		string PluginPath = Path.Combine(ModuleDirectory, "../../");
+		string YscPath;
 
-        PublicDefinitions.Add("YSC_PATH=TEXT(\"" + YscPath + "\")");
+		if (Target.Platform == UnrealTargetPlatform.Win64)
+		{
+			YscPath = Path.Combine(PluginPath, "Tools/Win64/ysc.exe");
+		}
+		else if (Target.Platform == UnrealTargetPlatform.Mac)
+		{
+			YscPath = Path.Combine(PluginPath, "Tools/Mac/ysc");
+		}
+		else
+		{
+			YscPath = "ysc"; // fallback to system path
+		}
 
-        DynamicallyLoadedModuleNames.AddRange(
-            new string[]
-            {
-                "AssetTools",
-                "MainFrame",
-            });
-
-        PrivateDependencyModuleNames.AddRange(
-            new string[]
-            {
-                "ContentBrowser",
-                "Core",
-                "CoreUObject",
-                "DesktopWidgets",
-                "EditorStyle",
-                "Engine",
-                "InputCore",
-                "Projects",
-                "Slate",
-                "SlateCore",
-                "UnrealEd",
-
-                "YarnSpinner",
-                "YSProtobuf",
-                "Json",
-                "JsonUtilities",
-                "Localization",
-                "LocalizationCommandletExecution",
-                "EditorSubsystem",
-                "Kismet",
-                "BlueprintGraph",
-            });
-    }
-
-    public string ToolPath(ReadOnlyTargetRules Target)
-    {
-        return "YarnSpinner-Unreal/Tools/" + Target.Platform + "/";
-    }
+		// make ysc path available in code via define
+		PrivateDefinitions.Add(string.Format("YSC_PATH=TEXT(\"{0}\")", YscPath.Replace("\\", "/")));
+	}
 }

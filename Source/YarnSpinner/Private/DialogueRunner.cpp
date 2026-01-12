@@ -1,398 +1,257 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// copyright yarn spinner pty ltd
+// licensed under the mit license
 
 #include "DialogueRunner.h"
-#include "Line.h"
-#include "Option.h"
-#include "YarnSubsystem.h"
-#include "YarnSpinner.h"
-#include "Kismet/KismetInternationalizationLibrary.h"
-#include "Misc/YSLogging.h"
+#include "YarnProgram.h"
+#include "Presenters/DialoguePresenter.h"
 
-THIRD_PARTY_INCLUDES_START
-#include "YarnSpinnerCore/VirtualMachine.h"
-THIRD_PARTY_INCLUDES_END
-//#include "StaticParty.h"
-
-
-// Sets default values
-ADialogueRunner::ADialogueRunner()
+UDialogueRunner::UDialogueRunner()
 {
-    // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-    PrimaryActorTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
+	bAutoStart = false;
+	StartNode = TEXT("Start");
 }
 
-
-// Called when the game starts or when spawned
-void ADialogueRunner::PreInitializeComponents()
+void UDialogueRunner::BeginPlay()
 {
-    Super::PreInitializeComponents();
+	Super::BeginPlay();
 
-    if (!YarnProject)
-    {
-        UE_LOG(LogYarnSpinner, Error, TEXT("DialogueRunner can't initialize, because it doesn't have a Yarn Asset."));
-        return;
-    }
+	// bind vm events to our handlers
+	VirtualMachine.OnLine = [this](const FString& LineID, const TArray<FString>& Substitutions)
+	{
+		HandleLine(LineID, Substitutions);
+	};
 
-    YarnProject->Init();
+	VirtualMachine.OnCommand = [this](const FString& CommandText)
+	{
+		HandleCommand(CommandText);
+	};
 
-    Yarn::Program Program{};
+	VirtualMachine.OnOptions = [this](const TArray<FYarnOption>& Options)
+	{
+		HandleOptions(Options);
+	};
 
-    bool bParseSuccess = Program.ParsePartialFromArray(YarnProject->Data.GetData(), YarnProject->Data.Num());
+	VirtualMachine.OnNodeStart = [this](const FString& NodeName)
+	{
+		HandleNodeStart(NodeName);
+	};
 
-    if (!bParseSuccess)
-    {
-        UE_LOG(LogYarnSpinner, Error, TEXT("DialogueRunner can't initialize, because its Yarn Asset failed to load."));
-        return;
-    }
+	VirtualMachine.OnNodeComplete = [this](const FString& NodeName)
+	{
+		HandleNodeComplete(NodeName);
+	};
 
-    // Create the Library
-    Library = TUniquePtr<Yarn::Library>(new Yarn::Library(*this));
+	VirtualMachine.OnDialogueComplete = [this]()
+	{
+		HandleDialogueComplete();
+	};
 
-    UYarnSubsystem* SS = YarnSubsystem();
-
-
-    // Create the VirtualMachine, supplying it with the loaded Program and
-    // configuring it to use our library, plus use this ADialogueRunner as the
-    // logger and the variable storage
-    // VirtualMachine = TUniquePtr<Yarn::VirtualMachine>(new Yarn::VirtualMachine(Program, *(Library), *this, *this));
-    VirtualMachine = TUniquePtr<Yarn::VirtualMachine>(new Yarn::VirtualMachine(Program, *this, *this));
-
-    VirtualMachine->LineHandler = [this](Yarn::Line& Line)
-    {
-        UE_LOG(LogYarnSpinner, Log, TEXT("Received line %s"), UTF8_TO_TCHAR(Line.LineID.c_str()));
-
-        // Get the Yarn line struct, and make a ULine out of it to use
-        ULine* LineObject = NewObject<ULine>(this);
-        LineObject->LineID = FName(Line.LineID.c_str());
-
-        GetDisplayTextForLine(LineObject, Line);
-
-        const TArray<TSoftObjectPtr<UObject>> LineAssets = YarnProject->GetLineAssets(LineObject->LineID);
-        YS_LOG_FUNC("Got %d line assets for line '%s'", LineAssets.Num(), *LineObject->LineID.ToString())
-
-        OnRunLine(LineObject, LineAssets);
-    };
-
-    VirtualMachine->OptionsHandler = [this](Yarn::OptionSet& OptionSet)
-    {
-        UE_LOG(LogYarnSpinner, Log, TEXT("Received %i options"), OptionSet.Options.size());
-
-        // Build a TArray for every option in this OptionSet
-        TArray<UOption*> Options;
-
-        for (auto Option : OptionSet.Options)
-        {
-            UE_LOG(LogYarnSpinner, Log, TEXT("- %i: %s"), Option.ID, UTF8_TO_TCHAR(Option.Line.LineID.c_str()));
-
-            UOption* Opt = NewObject<UOption>(this);
-            Opt->OptionID = Option.ID;
-
-            Opt->Line = NewObject<ULine>(Opt);
-            Opt->Line->LineID = FName(Option.Line.LineID.c_str());
-
-            GetDisplayTextForLine(Opt->Line, Option.Line);
-
-            Opt->bIsAvailable = Option.IsAvailable;
-
-            Opt->SourceDialogueRunner = this;
-
-            Options.Add(Opt);
-        }
-
-        OnRunOptions(Options);
-    };
-
-    VirtualMachine->DoesFunctionExist = [this](const std::string& FunctionName) -> bool
-    {
-        return YarnSubsystem()->GetYarnLibraryRegistry()->HasFunction(FName(UTF8_TO_TCHAR(FunctionName.c_str())));
-    };
-
-    VirtualMachine->GetExpectedFunctionParamCount = [this](const std::string& FunctionName) -> int
-    {
-        return YarnSubsystem()->GetYarnLibraryRegistry()->GetExpectedFunctionParamCount(FName(UTF8_TO_TCHAR(FunctionName.c_str())));
-    };
-
-    VirtualMachine->CallFunction = [this](const std::string& FunctionName, const std::vector<Yarn::Value>& Parameters) -> Yarn::Value
-    {
-        return YarnSubsystem()->GetYarnLibraryRegistry()->CallFunction(
-            FName(UTF8_TO_TCHAR(FunctionName.c_str())),
-            TArray<Yarn::Value>(Parameters.data(), Parameters.size())
-        );
-    };
-
-    VirtualMachine->CommandHandler = [this](Yarn::Command& Command)
-    {
-        UE_LOG(LogYarnSpinner, Log, TEXT("Received command \"%s\""), UTF8_TO_TCHAR(Command.Text.c_str()));
-
-        FString CommandText = FString(UTF8_TO_TCHAR(Command.Text.c_str()));
-
-        TArray<FString> CommandElements;
-        CommandText.ParseIntoArray(CommandElements, TEXT(" "));
-
-        if (CommandElements.Num() == 0)
-        {
-            TArray<FString> EmptyParameters;
-            UE_LOG(LogYarnSpinner, Error, TEXT("Command received, but was unable to parse it."));
-            OnRunCommand(FString("(unknown)"), EmptyParameters);
-            return;
-        }
-
-        FName CommandName = FName(CommandElements[0]);
-        CommandElements.RemoveAt(0);
-
-        auto Lib = YarnSubsystem()->GetYarnLibraryRegistry();
-
-        if (Lib->HasCommand(CommandName))
-        {
-            return Lib->CallCommand(
-                CommandName,
-                this,
-                CommandElements
-            );
-        }
-
-        // Haven't handled the function yet, so call the DialogueRunner's handler
-        OnRunCommand(CommandName.ToString(), CommandElements);
-    };
-
-    VirtualMachine->NodeStartHandler = [this](std::string NodeName)
-    {
-        UE_LOG(LogYarnSpinner, Log, TEXT("Received node start \"%s\""), UTF8_TO_TCHAR(NodeName.c_str()));
-    };
-
-    VirtualMachine->NodeCompleteHandler = [this](std::string NodeName)
-    {
-        UE_LOG(LogYarnSpinner, Log, TEXT("Received node complete \"%s\""), UTF8_TO_TCHAR(NodeName.c_str()));
-    };
-
-    VirtualMachine->DialogueCompleteHandler = [this]()
-    {
-        UE_LOG(LogYarnSpinner, Log, TEXT("Received dialogue complete"));
-        OnDialogueEnded();
-    };
+	// auto-start if configured
+	if (bAutoStart && YarnProgram != nullptr)
+	{
+		StartDialogue(StartNode);
+	}
 }
 
-
-// Called every frame
-void ADialogueRunner::Tick(float DeltaTime)
+void UDialogueRunner::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    Super::Tick(DeltaTime);
+	// stop any running dialogue
+	if (VirtualMachine.IsRunning())
+	{
+		VirtualMachine.Stop();
+	}
+
+	Super::EndPlay(EndPlayReason);
 }
 
-
-void ADialogueRunner::OnDialogueStarted_Implementation()
+void UDialogueRunner::StartDialogue(const FString& NodeName)
 {
-    // default = no-op
+	if (YarnProgram == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("cannot start dialogue: no yarn program assigned"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("starting dialogue at node: %s"), *NodeName);
+
+	// load program into vm
+	VirtualMachine.LoadProgram(YarnProgram);
+
+	// start execution
+	VirtualMachine.SetStartNode(NodeName);
 }
 
-
-void ADialogueRunner::OnDialogueEnded_Implementation()
+void UDialogueRunner::Continue()
 {
-    // default = no-op
+	if (!VirtualMachine.IsRunning())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("cannot continue: dialogue not running"));
+		return;
+	}
+
+	VirtualMachine.Continue();
 }
 
-
-void ADialogueRunner::OnRunLine_Implementation(ULine* Line, const TArray<TSoftObjectPtr<UObject>>& LineAssets)
+void UDialogueRunner::SelectOption(int32 OptionIndex)
 {
-    // default = log and immediately continue
-    UE_LOG(LogYarnSpinner, Warning, TEXT("DialogueRunner received line with ID \"%s\". Implement OnRunLine to customise its behaviour."), *Line->LineID.ToString());
-    ContinueDialogue();
+	if (!VirtualMachine.IsRunning())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("cannot select option: dialogue not running"));
+		return;
+	}
+
+	VirtualMachine.SetSelectedOption(OptionIndex);
 }
 
-
-void ADialogueRunner::OnRunOptions_Implementation(const TArray<class UOption*>& Options)
+void UDialogueRunner::StopDialogue()
 {
-    // default = log and choose the first option
-    UE_LOG(LogYarnSpinner, Warning, TEXT("DialogueRunner received %i options. Choosing the first one by default. Implement OnRunOptions to customise its behaviour."), Options.Num());
-
-    SelectOption(Options[0]);
+	VirtualMachine.Stop();
+	UE_LOG(LogTemp, Log, TEXT("dialogue stopped"));
 }
 
-
-void ADialogueRunner::OnRunCommand_Implementation(const FString& Command, const TArray<FString>& Parameters)
+bool UDialogueRunner::IsDialogueRunning() const
 {
-    // default = no-op
-    UE_LOG(LogYarnSpinner, Warning, TEXT("DialogueRunner received command \"%s\". Implement OnRunCommand to customise its behaviour."), *Command);
-    ContinueDialogue();
+	return VirtualMachine.IsRunning();
 }
 
-
-/** Starts running dialogue from the given node name. */
-void ADialogueRunner::StartDialogue(FName NodeName)
+bool UDialogueRunner::GetBoolVariable(const FString& VariableName, bool DefaultValue)
 {
-    if (VirtualMachine.IsValid() == false)
-    {
-        UE_LOG(LogYarnSpinner, Error, TEXT("DialogueRunner can't start node %s, because it failed to load a Yarn asset."), *NodeName.ToString());
-        return;
-    }
+	FYarnValue Value = VirtualMachine.GetVariable(VariableName);
 
-    bool bNodeSelected = VirtualMachine->SetNode(TCHAR_TO_UTF8(*NodeName.ToString()));
+	if (Value.Type == FYarnValue::EType::Bool)
+	{
+		return Value.BoolValue;
+	}
 
-    if (bNodeSelected)
-    {
-        OnDialogueStarted();
-        ContinueDialogue();
-    }
-    else
-    {
-        UE_LOG(LogYarnSpinner, Error, TEXT("DialogueRunner can't start node %s, because a node with that name was not found."), *NodeName.ToString());
-        return;
-    }
+	return DefaultValue;
 }
 
-
-/** Continues running the current dialogue, producing either lines, options, commands, or a dialogue-end signal. */
-void ADialogueRunner::ContinueDialogue()
+void UDialogueRunner::SetBoolVariable(const FString& VariableName, bool Value)
 {
-    YS_LOG_FUNCSIG
-
-    if (VirtualMachine->GetCurrentExecutionState() == Yarn::VirtualMachine::ExecutionState::ERROR)
-    {
-        UE_LOG(LogYarnSpinner, Error, TEXT("VirtualMachine is in an error state and cannot continue running."));
-        return;
-    }
-
-    VirtualMachine->Continue();
-
-    Yarn::VirtualMachine::ExecutionState State = VirtualMachine->GetCurrentExecutionState();
-
-    if (State == Yarn::VirtualMachine::ExecutionState::ERROR)
-    {
-        UE_LOG(LogYarnSpinner, Error, TEXT("VirtualMachine encountered an error."));
-        return;
-    }
+	VirtualMachine.SetVariable(VariableName, FYarnValue(Value));
 }
 
-
-/** Indicates to the dialogue runner that an option was selected. */
-void ADialogueRunner::SelectOption(UOption* Option)
+float UDialogueRunner::GetNumberVariable(const FString& VariableName, float DefaultValue)
 {
-    Yarn::VirtualMachine::ExecutionState State = this->VirtualMachine->GetCurrentExecutionState();
+	FYarnValue Value = VirtualMachine.GetVariable(VariableName);
 
-    if (State != Yarn::VirtualMachine::ExecutionState::WAITING_ON_OPTION_SELECTION)
-    {
-        UE_LOG(LogYarnSpinner, Error, TEXT("Dialogue Runner received a call to SelectOption but it wasn't expecting a selection!"));
-        return;
-    }
+	if (Value.Type == FYarnValue::EType::Float)
+	{
+		return Value.FloatValue;
+	}
 
-    UE_LOG(LogYarnSpinner, Log, TEXT("Selected option %i (%s)"), Option->OptionID, *Option->Line->LineID.ToString());
-
-    VirtualMachine->SetSelectedOption(Option->OptionID);
-
-    if (bRunSelectedOptionsAsLines)
-    {
-        const TArray<TSoftObjectPtr<UObject>> LineAssets = YarnProject->GetLineAssets(Option->Line->LineID);
-        YS_LOG_FUNC("Got %d line assets for line '%s'", LineAssets.Num(), *Option->Line->LineID.ToString())
-
-        OnRunLine(Option->Line, LineAssets);
-    }
-    else
-    {
-        ContinueDialogue();
-    }
+	return DefaultValue;
 }
 
-
-void ADialogueRunner::Log(std::string Message, Type Severity)
+void UDialogueRunner::SetNumberVariable(const FString& VariableName, float Value)
 {
-    FString MessageText = FString(UTF8_TO_TCHAR(Message.c_str()));
-
-    switch (Severity)
-    {
-    case Type::INFO:
-        YS_LOG("YarnSpinner: %s", *MessageText);
-        break;
-    case Type::WARNING:
-        YS_WARN("YarnSpinner: %s", *MessageText);
-        break;
-    case Type::ERROR:
-        YS_ERR("YarnSpinner: %s", *MessageText);
-        break;
-    }
+	VirtualMachine.SetVariable(VariableName, FYarnValue(Value));
 }
 
-
-void ADialogueRunner::SetValue(std::string Name, bool bValue)
+FString UDialogueRunner::GetStringVariable(const FString& VariableName, const FString& DefaultValue)
 {
-    YS_LOG("Setting variable %s to bool %i", UTF8_TO_TCHAR(Name.c_str()), bValue)
-    YarnSubsystem()->SetValue(Name, bValue);
+	FYarnValue Value = VirtualMachine.GetVariable(VariableName);
+
+	if (Value.Type == FYarnValue::EType::String)
+	{
+		return Value.StringValue;
+	}
+
+	return DefaultValue;
 }
 
-
-void ADialogueRunner::SetValue(std::string Name, float Value)
+void UDialogueRunner::SetStringVariable(const FString& VariableName, const FString& Value)
 {
-    YS_LOG("Setting variable %s to float %f", UTF8_TO_TCHAR(Name.c_str()), Value)
-    YarnSubsystem()->SetValue(Name, Value);
+	VirtualMachine.SetVariable(VariableName, FYarnValue(Value));
 }
 
-
-void ADialogueRunner::SetValue(std::string Name, std::string Value)
+FDialogueOption UDialogueRunner::ConvertOption(const FYarnOption& InternalOption) const
 {
-    YS_LOG("Setting variable %s to string %s", UTF8_TO_TCHAR(Name.c_str()), UTF8_TO_TCHAR(Value.c_str()))
-    YarnSubsystem()->SetValue(Name, Value);
+	FDialogueOption Result;
+	Result.LineID = InternalOption.LineID;
+	Result.Text = InternalOption.Text;
+	Result.bIsAvailable = InternalOption.bIsAvailable;
+	Result.Index = InternalOption.Index;
+	return Result;
 }
 
-
-bool ADialogueRunner::HasValue(std::string Name)
+void UDialogueRunner::HandleLine(const FString& LineID, const TArray<FString>& Substitutions)
 {
-    return YarnSubsystem()->HasValue(Name);
+	// get the localized text
+	FString LineText = YarnProgram ? YarnProgram->GetLineText(LineID) : LineID;
+
+	// perform substitutions
+	// replace {0}, {1}, {2}, etc. with the corresponding values from the substitutions array
+	for (int32 i = 0; i < Substitutions.Num(); i++)
+	{
+		FString Placeholder = FString::Printf(TEXT("{%d}"), i);
+		LineText = LineText.Replace(*Placeholder, *Substitutions[i]);
+	}
+
+	// if we have a presenter, use it; otherwise use blueprint events
+	if (DialoguePresenter.GetInterface())
+	{
+		IDialoguePresenter::Execute_PresentLine(DialoguePresenter.GetObject(), LineID, LineText);
+	}
+	else
+	{
+		// call blueprint event
+		OnLineReceived(LineID, LineText);
+	}
 }
 
-
-Yarn::Value ADialogueRunner::GetValue(std::string Name)
+void UDialogueRunner::HandleCommand(const FString& CommandText)
 {
-    Yarn::Value Value = YarnSubsystem()->GetValue(Name);
-    YS_LOG("Retrieving variable %s with value %s", UTF8_TO_TCHAR(Name.c_str()), UTF8_TO_TCHAR(Value.ConvertToString().c_str()))
-    return Value;
+	UE_LOG(LogTemp, Log, TEXT("command: %s"), *CommandText);
+
+	// call blueprint event
+	OnCommandReceived(CommandText);
 }
 
-
-void ADialogueRunner::ClearValue(std::string Name)
+void UDialogueRunner::HandleOptions(const TArray<FYarnOption>& Options)
 {
-    YS_LOG("Clearing variable %s", UTF8_TO_TCHAR(Name.c_str()))
-    YarnSubsystem()->ClearValue(Name);
+	// convert to blueprint-friendly format
+	TArray<FDialogueOption> BlueprintOptions;
+	BlueprintOptions.Reserve(Options.Num());
+
+	for (const FYarnOption& Option : Options)
+	{
+		BlueprintOptions.Add(ConvertOption(Option));
+	}
+
+	// if we have a presenter, use it; otherwise use blueprint events
+	if (DialoguePresenter.GetInterface())
+	{
+		IDialoguePresenter::Execute_PresentOptions(DialoguePresenter.GetObject(), BlueprintOptions);
+	}
+	else
+	{
+		// call blueprint event
+		OnOptionsReceived(BlueprintOptions);
+	}
 }
 
-
-UYarnSubsystem* ADialogueRunner::YarnSubsystem() const
+void UDialogueRunner::HandleNodeStart(const FString& NodeName)
 {
-    if (!GetGameInstance())
-    {
-        YS_WARN("Could not retrieve YarnSubsystem because GetGameInstance() returned null")
-        return nullptr;
-    }
-    return GetGameInstance()->GetSubsystem<UYarnSubsystem>();
+	UE_LOG(LogTemp, Log, TEXT("node started: %s"), *NodeName);
+
+	// call blueprint event
+	OnNodeStart(NodeName);
 }
 
-
-void ADialogueRunner::GetDisplayTextForLine(ULine* Line, const Yarn::Line& YarnLine)
+void UDialogueRunner::HandleNodeComplete(const FString& NodeName)
 {
-    const FName LineID = FName(YarnLine.LineID.c_str());
+	UE_LOG(LogTemp, Log, TEXT("node completed: %s"), *NodeName);
 
-    // This assumes that we only ever care about lines that actually exist in .yarn files (rather than allowing extra lines in .csv files)
-    if (!YarnProject || !YarnProject->Lines.Contains(LineID))
-    {
-        Line->DisplayText = FText::FromString(TEXT("(missing line!)"));
-        return;
-    }
+	// call blueprint event
+	OnNodeComplete(NodeName);
+}
 
-    const FText LocalisedDisplayText = FText::FromString(YarnProject->Lines[LineID]);
+void UDialogueRunner::HandleDialogueComplete()
+{
+	UE_LOG(LogTemp, Log, TEXT("dialogue complete"));
 
-    const FText NonLocalisedDisplayText = FText::FromString(YarnProject->Lines[LineID]);
-
-    // Apply substitutions
-    FFormatOrderedArguments FormatArgs;
-    for (auto Substitution : YarnLine.Substitutions)
-    {
-        FormatArgs.Emplace(FText::FromString(UTF8_TO_TCHAR(Substitution.c_str())));
-    }
-
-    const FText TextWithSubstitutions = (LocalisedDisplayText.IsEmptyOrWhitespace()) ? FText::Format(NonLocalisedDisplayText, FormatArgs) : FText::Format(LocalisedDisplayText, FormatArgs);
-
-    // TODO: add support for markup & context (speaker, target)
-
-    YS_LOG_FUNC("Setting line %s to display text '%s'", *LineID.ToString(), *TextWithSubstitutions.ToString())
-
-    Line->DisplayText = TextWithSubstitutions;
+	// call blueprint event
+	OnDialogueComplete();
 }

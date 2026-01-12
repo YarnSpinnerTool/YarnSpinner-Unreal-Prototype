@@ -1,0 +1,24 @@
+# nanopb options for yarn_spinner.proto
+# Use static allocation with fixed-size buffers instead of callbacks
+
+# Set max sizes for all string fields
+Yarn.Program.name max_size:128
+Yarn.Node.name max_size:128
+Yarn.Header.key max_size:128
+Yarn.Header.value max_size:256
+
+# Instruction string fields
+Yarn.Instruction.RunLineInstruction.lineID max_size:64
+Yarn.Instruction.RunCommandInstruction.commandText max_size:512
+Yarn.Instruction.AddOptionInstruction.lineID max_size:64
+Yarn.Instruction.PushStringInstruction.value max_size:512
+Yarn.Instruction.CallFunctionInstruction.functionName max_size:128
+Yarn.Instruction.PushVariableInstruction.variableName max_size:128
+Yarn.Instruction.StoreVariableInstruction.variableName max_size:128
+Yarn.Instruction.RunNodeInstruction.nodeName max_size:128
+Yarn.Instruction.DetourToNodeInstruction.nodeName max_size:128
+Yarn.Instruction.AddSaliencyCandidateInstruction.contentID max_size:64
+Yarn.Instruction.AddSaliencyCandidateFromNodeInstruction.nodeName max_size:128
+
+# Operand string value
+Yarn.Operand.string_value max_size:512

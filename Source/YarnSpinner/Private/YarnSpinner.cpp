@@ -1,47 +1,33 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// copyright yarn spinner pty ltd
+// licensed under the mit license
 
-#include "YarnSpinner.h"
-
+#include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
-#include "Interfaces/IPluginManager.h"
-#include "Misc/MessageDialog.h"
-#include "Misc/YSLogging.h"
 
-THIRD_PARTY_INCLUDES_START
-#include <google/protobuf/stubs/logging.h>
-THIRD_PARTY_INCLUDES_END
-
-
-#define LOCTEXT_NAMESPACE "FYarnSpinnerModule"
-
-
-
-void UnrealLogHandler(google::protobuf::LogLevel level, const char* filename, int line,
-                        const std::string& message) {
-	UE_LOG(LogYarnSpinner, Warning, TEXT("Protobuf: %hs"), message.c_str());
-}
-
-
-void FYarnSpinnerModule::StartupModule()
+/**
+ * yarn spinner runtime module
+ *
+ * this module provides the core yarn spinner functionality:
+ * - uyarnprogram asset for storing compiled dialogue
+ * - fyarnvirtualmachine for executing dialogue
+ * - blueprint integration via udialoguerunner
+ *
+ * the module has minimal dependencies - just nanopb for protobuf deserialization
+ * no google protobuf, no .net runtime - just pure c++ with a tiny (~100kb) dependency
+ */
+class FYarnSpinnerModule : public IModuleInterface
 {
-	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
-	SetLogHandler(UnrealLogHandler);
-	
-	UE_LOG(LogYarnSpinner, Display, TEXT("Installed Protobuf log handler"));
-}
+public:
+	/** imoduleinterface implementation */
+	virtual void StartupModule() override
+	{
+		UE_LOG(LogTemp, Log, TEXT("yarn spinner 3 runtime module starting up"));
+	}
 
-void FYarnSpinnerModule::ShutdownModule()
-{
-	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
-	// we call this function before unloading the module.
-}
+	virtual void ShutdownModule() override
+	{
+		UE_LOG(LogTemp, Log, TEXT("yarn spinner 3 runtime module shutting down"));
+	}
+};
 
-bool FYarnSpinnerModule::SupportsDynamicReloading()
-{
-    return true;
-}
-
-
-#undef LOCTEXT_NAMESPACE
-	
 IMPLEMENT_MODULE(FYarnSpinnerModule, YarnSpinner)

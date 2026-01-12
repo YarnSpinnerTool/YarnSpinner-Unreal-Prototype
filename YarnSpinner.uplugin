@@ -1,39 +1,40 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "0.0.1",
-	"FriendlyName": "YarnSpinner",
-	"Description": "Yarn Spinner for Unreal",
-	"Category": "Dialogue",
-	"CreatedBy": "Secret Lab",
-	"CreatedByURL": "https://yarnspinner.dev",
+	"VersionName": "3.0.0",
+	"FriendlyName": "Yarn Spinner 3 for Unreal Engine",
+	"Description": "Yarn Spinner is a tool for creating interactive dialogue for games. Write your conversations in Yarn, a simple programming language that's designed to be easy for writers to learn.",
+	"Category": "Narrative",
+	"CreatedBy": "Secret Lab Pty. Ltd.",
+	"CreatedByURL": "https://www.yarnspinner.dev",
 	"DocsURL": "https://docs.yarnspinner.dev",
 	"MarketplaceURL": "",
-	"SupportURL": "",
+	"SupportURL": "https://github.com/YarnSpinnerTool/YarnSpinner-Unreal",
 	"CanContainContent": true,
 	"IsBetaVersion": true,
-	"IsExperimentalVersion": true,
+	"IsExperimentalVersion": false,
 	"Installed": false,
 	"Modules": [
 		{
 			"Name": "YarnSpinner",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "PreDefault",
+			"PlatformAllowList": [
+				"Win64",
+				"Mac",
+				"Linux",
+				"IOS",
+				"Android"
+			]
 		},
 		{
 			"Name": "YarnSpinnerEditor",
 			"Type": "Editor",
-			"LoadingPhase": "PostEngineInit",
-			"AdditionalDependencies": [
-				"Engine"
-			],
-			"WhitelistPlatforms": [
-				"Mac",
-				"Win64"
-			],
+			"LoadingPhase": "Default",
 			"PlatformAllowList": [
+				"Win64",
 				"Mac",
-				"Win64"
+				"Linux"
 			]
 		}
 	]

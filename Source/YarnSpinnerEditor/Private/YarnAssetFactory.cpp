@@ -1,486 +1,306 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// copyright yarn spinner pty ltd
+// licensed under the mit license
 
 #include "YarnAssetFactory.h"
-
-#include "ISourceControlModule.h"
-#include "ISourceControlOperation.h"
-#include "ISourceControlProvider.h"
-#include "ISourceControlState.h"
-#include "LocalizationCommandletExecution.h"
-#include "LocalizationConfigurationScript.h"
-#include "LocalizationSettings.h"
-#include "LocalizationTargetTypes.h"
-#include "LocTextHelper.h"
-#include "YarnSpinnerEditor.h"
-
+#include "YarnProgram.h"
 #include "Misc/FileHelper.h"
-#include "EditorFramework/AssetImportData.h"
-#include "Containers/UnrealString.h"
+#include "Misc/Paths.h"
+#include "HAL/PlatformProcess.h"
+#include "HAL/PlatformFileManager.h"
+#include "GenericPlatform/GenericPlatformFile.h"
 
-#include "ReimportYarnAssetFactory.h"
-#include "SourceControlOperations.h"
-#include "YarnProjectMeta.h"
-#include "Misc/YSLogging.h"
-#include "Serialization/Csv/CsvParser.h"
-
-THIRD_PARTY_INCLUDES_START
-#include "YarnSpinnerCore/yarn_spinner.pb.h"
-#include "YarnSpinnerCore/compiler_output.pb.h"
-
-#include <google/protobuf/util/json_util.h>
-#include <google/protobuf/util/type_resolver_util.h>
-THIRD_PARTY_INCLUDES_END
-
-// google::protobuf::Message &from_json(google::protobuf::Message &msg, const std::string &json);
-
-UYarnAssetFactory::UYarnAssetFactory(const FObjectInitializer& ObjectInitializer)
-    : Super(ObjectInitializer)
+UYarnAssetFactory::UYarnAssetFactory()
 {
-    Formats.Add(FString(TEXT("yarnproject;")) + NSLOCTEXT("UYarnAssetFactory", "FormatTxt", "Yarn Project File").ToString());
-    SupportedClass = UYarnProject::StaticClass();
-    bCreateNew = false;
-    bEditorImport = true;
+	// configure factory for .yarnproject and .yarn files
+	SupportedClass = UYarnProgram::StaticClass();
+	Formats.Add(TEXT("yarnproject;Yarn Spinner Project"));
+	Formats.Add(TEXT("yarn;Yarn Dialogue Script"));
+
+	bCreateNew = false;
+	bEditorImport = true;
+	bText = false;
 }
-
-
-UObject* UYarnAssetFactory::FactoryCreateBinary(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, UObject* Context, const TCHAR* Type, const uint8*& Buffer, const uint8* BufferEnd, FFeedbackContext* Warn)
-{
-    YS_LOG_FUNCSIG
-
-    //    FEditorDelegates::OnAssetPreImport.Broadcast(this, InClass, InParent, InName, Type);
-
-    UYarnProject* YarnProject = nullptr;
-    FString TextString;
-
-    YarnProject = NewObject<UYarnProject>(InParent, InClass, InName, Flags);
-    // YarnAsset->SourceFilePath = UAssetImportData::SanitizeImportFilename(CurrentFilename, YarnAsset->GetOutermost());
-
-    const TCHAR* FileName = *CurrentFilename;
-
-    Yarn::CompilerOutput CompilerOutput;
-
-    // Record where this asset came from so we know how to update it
-    if (!CurrentFilename.IsEmpty())
-    {
-        YarnProject->AssetImportData->Update(CurrentFilename);
-    }
-
-    bool bSuccess = GetCompiledDataForYarnProject(FileName, CompilerOutput);
-
-    if (!bSuccess)
-    {
-        UE_LOG(LogYarnSpinnerEditor, Error, TEXT("Failed to get results from the compiler. Stopping import."));
-        return nullptr;
-    }
-
-    bool bAnyErrors = false;
-    for (auto Diagnostic : CompilerOutput.diagnostics())
-    {
-        if (Diagnostic.severity() == Yarn::Diagnostic_Severity::Diagnostic_Severity_Error)
-        {
-            UE_LOG(LogYarnSpinnerEditor, Error, TEXT("Error: %s:%i %s"),
-                   UTF8_TO_TCHAR(Diagnostic.filename().c_str()),
-                   Diagnostic.range().start().line(),
-                   UTF8_TO_TCHAR(Diagnostic.message().c_str()));
-            bAnyErrors = true;
-        }
-        else if (Diagnostic.severity() == Yarn::Diagnostic_Severity::Diagnostic_Severity_Warning)
-        {
-            UE_LOG(LogYarnSpinnerEditor, Warning, TEXT("Warning: %s:%i %s"),
-                   UTF8_TO_TCHAR(Diagnostic.filename().c_str()),
-                   Diagnostic.range().start().line(),
-                   UTF8_TO_TCHAR(Diagnostic.message().c_str()));
-        }
-        else if (Diagnostic.severity() == Yarn::Diagnostic_Severity::Diagnostic_Severity_Info)
-        {
-            UE_LOG(LogYarnSpinnerEditor, Log, TEXT("%s:%i %s"),
-                   UTF8_TO_TCHAR(Diagnostic.filename().c_str()),
-                   Diagnostic.range().start().line(),
-                   UTF8_TO_TCHAR(Diagnostic.message().c_str()));
-        }
-    }
-
-    if (bAnyErrors)
-    {
-        UE_LOG(LogYarnSpinnerEditor, Error, TEXT("File contains errors; stopping import."));
-        return nullptr;
-    }
-
-    // Now convert the Program into binary wire format for saving
-    std::string Data = CompilerOutput.program().SerializeAsString();
-
-    // And convert THAT into a TArray of bytes for storage
-    TArray<uint8> Output = TArray<uint8>((const uint8*)Data.c_str(), Data.size());
-
-    YarnProject->Data = Output;
-
-    // For each line we've received, store it in the Yarn asset
-    for (auto Pair : CompilerOutput.strings())
-    {
-        FName LineID = FName(Pair.first.c_str());
-        FString LineText = FString(Pair.second.text().c_str());
-        YarnProject->Lines.Add(LineID, LineText);
-    }
-
-    // Record where this asset came from so we know how to update it
-    if (!CurrentFilename.IsEmpty())
-    {
-        YarnProject->AssetImportData->Update(CurrentFilename);
-    }
-
-    // Store source file data on asset for future comparison
-    TArray<FString> SourceFiles;
-    bSuccess = GetSourcesForProject(FileName, SourceFiles);
-
-    if (bSuccess)
-    {
-        YarnProject->SetYarnSources(SourceFiles);
-    }
-
-    BuildLocalizationTarget(YarnProject, CompilerOutput);
-
-    //    YarnAsset->PostEditChange();
-    //    YarnAsset->MarkPackageDirty();
-
-    //    FEditorDelegates::OnAssetPostImport.Broadcast(this, YarnAsset);
-
-    return YarnProject;
-}
-
 
 bool UYarnAssetFactory::FactoryCanImport(const FString& Filename)
 {
-    return FPaths::GetExtension(Filename).Equals(TEXT("yarnproject"));
+	// support both .yarnproject and individual .yarn files
+	FString Extension = FPaths::GetExtension(Filename);
+	return Extension.Equals(TEXT("yarnproject"), ESearchCase::IgnoreCase) ||
+	       Extension.Equals(TEXT("yarn"), ESearchCase::IgnoreCase);
 }
 
-
-EReimportResult::Type UYarnAssetFactory::Reimport(UYarnProject* YarnProject)
+UObject* UYarnAssetFactory::FactoryCreateFile(UClass* InClass, UObject* InParent, FName InName,
+	EObjectFlags Flags, const FString& Filename, const TCHAR* Parms, FFeedbackContext* Warn,
+	bool& bOutOperationCanceled)
 {
-    YS_LOG_FUNCSIG
+	bOutOperationCanceled = false;
 
-    const FString Path = YarnProject->AssetImportData->GetFirstFilename();
+	UE_LOG(LogTemp, Log, TEXT("importing yarn file: %s"), *Filename);
 
-    if (Path.IsEmpty() == false)
-    {
-        const FString FilePath = IFileManager::Get().ConvertToRelativePath(*Path);
+	// create temporary directory for ysc output
+	FString TempDir = FPaths::ProjectIntermediateDir() / TEXT("YarnCompile") / FGuid::NewGuid().ToString();
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	PlatformFile.CreateDirectory(*TempDir);
 
-        TArray<uint8> Data;
+	// get output name from asset name
+	FString OutputName = InName.ToString();
 
-        if (FFileHelper::LoadFileToArray(Data, *FilePath))
-        {
-            const uint8* Ptr = Data.GetData();
-            CurrentFilename = FilePath; //not thread safe but seems to be how it is done..
-            bool bWasCancelled = false;
-            UYarnProject* Result = Cast<UYarnProject>(FactoryCreateBinary(YarnProject->GetClass(), YarnProject->GetOuter(), YarnProject->GetFName(), YarnProject->GetFlags(), nullptr, *FPaths::GetExtension(FilePath), Ptr, Ptr + Data.Num(), GWarn));
+	// determine if we're importing a .yarn or .yarnproject file
+	FString Extension = FPaths::GetExtension(Filename);
+	FString ProjectPath = Filename;
 
-            // if (bWasCancelled)
-            // {
-            // 	return EReimportResult::Cancelled;
-            // }
-            return Result ? EReimportResult::Succeeded : EReimportResult::Failed;
-        }
-    }
-    return EReimportResult::Failed;
+	// if importing a single .yarn file, create a temporary .yarnproject
+	if (Extension.Equals(TEXT("yarn"), ESearchCase::IgnoreCase))
+	{
+		ProjectPath = TempDir / TEXT("Temp.yarnproject");
+
+		// create minimal .yarnproject json file
+		FString ProjectJson = FString::Printf(
+			TEXT("{\"fileVersion\":2,\"projectFileVersion\":2,\"files\":[\"%s\"],\"baseLanguage\":\"en\"}"),
+			*Filename.Replace(TEXT("\\"), TEXT("\\\\"))
+		);
+
+		if (!FFileHelper::SaveStringToFile(ProjectJson, *ProjectPath))
+		{
+			UE_LOG(LogTemp, Error, TEXT("failed to create temporary .yarnproject file"));
+			PlatformFile.DeleteDirectoryRecursively(*TempDir);
+			bOutOperationCanceled = true;
+			return nullptr;
+		}
+
+		UE_LOG(LogTemp, Log, TEXT("created temporary project: %s"), *ProjectPath);
+	}
+
+	// compile the yarn project
+	FString CompileError;
+	if (!CompileYarnProject(ProjectPath, TempDir, OutputName, CompileError))
+	{
+		UE_LOG(LogTemp, Error, TEXT("yarn compilation failed: %s"), *CompileError);
+
+		if (Warn)
+		{
+			Warn->Logf(ELogVerbosity::Error, TEXT("yarn compilation failed: %s"), *CompileError);
+		}
+
+		// clean up temp directory
+		PlatformFile.DeleteDirectoryRecursively(*TempDir);
+		return nullptr;
+	}
+
+	// read the compiled .yarnc file (just raw bytes - no parsing!)
+	FString YarncPath = TempDir / (OutputName + TEXT(".yarnc"));
+	TArray<uint8> YarncBytecode;
+
+	if (!FFileHelper::LoadFileToArray(YarncBytecode, *YarncPath))
+	{
+		UE_LOG(LogTemp, Error, TEXT("failed to read compiled .yarnc file: %s"), *YarncPath);
+		PlatformFile.DeleteDirectoryRecursively(*TempDir);
+		return nullptr;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("loaded %d bytes of compiled bytecode"), YarncBytecode.Num());
+
+	// create the yarn program asset
+	UYarnProgram* YarnProgram = NewObject<UYarnProgram>(InParent, InClass, InName, Flags);
+
+	// store the raw bytecode - that's it! no parsing, no conversion
+	YarnProgram->CompiledBytecode = MoveTemp(YarncBytecode);
+
+	// load string table from csv
+	FString StringTablePath = TempDir / (OutputName + TEXT("-Lines.csv"));
+	if (FPaths::FileExists(StringTablePath))
+	{
+		LoadStringTableFromCSV(YarnProgram, StringTablePath);
+		UE_LOG(LogTemp, Log, TEXT("loaded %d strings from string table"), YarnProgram->StringTable.Num());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("no string table found at: %s"), *StringTablePath);
+	}
+
+	// load metadata (optional)
+	FString MetadataPath = TempDir / (OutputName + TEXT("-Metadata.csv"));
+	if (FPaths::FileExists(MetadataPath))
+	{
+		LoadMetadataFromCSV(YarnProgram, MetadataPath);
+		UE_LOG(LogTemp, Log, TEXT("loaded %d metadata entries"), YarnProgram->LineMetadata.Num());
+	}
+
+	// clean up temp directory
+	PlatformFile.DeleteDirectoryRecursively(*TempDir);
+
+	// mark package dirty so unreal saves the asset
+	YarnProgram->MarkPackageDirty();
+
+	UE_LOG(LogTemp, Log, TEXT("successfully imported yarn project: %s"), *InName.ToString());
+
+	return YarnProgram;
 }
 
-
-FString UYarnAssetFactory::YscPath()
+bool UYarnAssetFactory::CompileYarnProject(const FString& ProjectPath, const FString& OutputDir,
+	const FString& OutputName, FString& OutError)
 {
-    return FPaths::Combine(FPaths::ProjectPluginsDir(), FString(YSC_PATH));
+	// get ysc compiler path
+	FString YscPath = GetYscPath();
+
+	if (!FPaths::FileExists(YscPath))
+	{
+		OutError = FString::Printf(TEXT("ysc compiler not found at: %s"), *YscPath);
+		return false;
+	}
+
+	// build ysc command line arguments
+	// ysc compile --output-directory <dir> --output-name <name> <project.yarnproject>
+	FString Arguments = FString::Printf(
+		TEXT("compile --output-directory \"%s\" --output-name \"%s\" \"%s\""),
+		*OutputDir,
+		*OutputName,
+		*ProjectPath
+	);
+
+	UE_LOG(LogTemp, Log, TEXT("running ysc: %s %s"), *YscPath, *Arguments);
+
+	// execute ysc compiler
+	int32 ReturnCode;
+	FString StdOut;
+	FString StdErr;
+
+	FPlatformProcess::ExecProcess(*YscPath, *Arguments, &ReturnCode, &StdOut, &StdErr);
+
+	// log output
+	if (!StdOut.IsEmpty())
+	{
+		UE_LOG(LogTemp, Log, TEXT("ysc output: %s"), *StdOut);
+	}
+
+	if (!StdErr.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ysc stderr: %s"), *StdErr);
+	}
+
+	// check return code
+	if (ReturnCode != 0)
+	{
+		OutError = FString::Printf(TEXT("ysc exited with code %d: %s"), ReturnCode, *StdErr);
+		return false;
+	}
+
+	return true;
 }
 
-
-bool UYarnAssetFactory::GetCompiledDataForYarnProject(const TCHAR* InFilePath, Yarn::CompilerOutput& CompilerOutput)
+void UYarnAssetFactory::LoadStringTableFromCSV(UYarnProgram* Program, const FString& CSVPath)
 {
-    FString StdOut;
-    FString StdErr;
+	// load csv file content
+	FString CSVContent;
+	if (!FFileHelper::LoadFileToString(CSVContent, *CSVPath))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("failed to load string table csv: %s"), *CSVPath);
+		return;
+	}
 
-    int32 ReturnCode;
+	// parse csv line by line
+	// format: id,text,file,node,lineNumber
+	TArray<FString> Lines;
+	CSVContent.ParseIntoArrayLines(Lines);
 
-    const FString Params = FString::Printf(TEXT("compile --stdout \"%s\""), InFilePath);
+	// skip header row (index 0)
+	for (int32 i = 1; i < Lines.Num(); i++)
+	{
+		// simple csv parsing - handles quoted fields
+		// yarn spinner csv output is straightforward, so we don't need a full csv parser
+		FString Line = Lines[i].TrimStartAndEnd();
 
-    // Run ysc to get our compilation result
-    UE_LOG(LogYarnSpinnerEditor, Log, TEXT("Calling ysc with %s"), *Params);
-    FPlatformProcess::ExecProcess(*YscPath(), *Params, &ReturnCode, &StdOut, &StdErr);
+		if (Line.IsEmpty())
+		{
+			continue;
+		}
 
-    UE_LOG(LogYarnSpinnerEditor, Log, TEXT("ysc returned %i;"), ReturnCode);
-    UE_LOG(LogYarnSpinnerEditor, Log, TEXT("stdout:"));
-    YS_LOG_CLEAN("%s", *StdOut);
-    UE_LOG(LogYarnSpinnerEditor, Log, TEXT("stderr:"));
-    YS_LOG_CLEAN("%s", *StdErr);
+		// find first comma to separate line id from text
+		// text might contain commas, so we only split on the first one
+		int32 FirstComma;
+		if (Line.FindChar(TEXT(','), FirstComma))
+		{
+			FString LineID = Line.Left(FirstComma).TrimQuotes();
 
-    if (ReturnCode != 0)
-    {
-        UE_LOG(LogYarnSpinnerEditor, Error, TEXT("Error compiling Yarn script: %s"), *StdErr);
-        return false;
-    }
+			// remaining part contains: text,file,node,lineNumber
+			// we only care about the text (second field)
+			FString Remaining = Line.Mid(FirstComma + 1);
 
-    // Convert stdout from an FString to a std::string
-    const std::string JSON(TCHAR_TO_UTF8(*StdOut));
+			// find second comma to extract just the text field
+			int32 SecondComma;
+			FString Text;
 
-    // Parse the incoming JSON into a Program message (to check that it's valid)
-    const auto Status = google::protobuf::util::JsonStringToMessage(JSON, &CompilerOutput);
+			if (Remaining.FindChar(TEXT(','), SecondComma))
+			{
+				Text = Remaining.Left(SecondComma).TrimQuotes();
+			}
+			else
+			{
+				// no third field, so text is the rest
+				Text = Remaining.TrimQuotes();
+			}
 
-    if (!Status.ok())
-    {
-        // Whoa, we failed to parse a CompilerOutput struct from the compiler.
-        UE_LOG(LogYarnSpinnerEditor, Error, TEXT("Error importing result from ysc: %s"), *FString(Status.ToString().c_str()));
+			// unescape csv escaped characters
+			Text.ReplaceInline(TEXT("\"\""), TEXT("\""));
 
-        return false;
-    }
-
-    return true;
+			Program->StringTable.Add(LineID, Text);
+		}
+	}
 }
 
-
-bool UYarnAssetFactory::GetSourcesForProject(const TCHAR* InFilePath, TArray<FString>& SourceFiles)
+void UYarnAssetFactory::LoadMetadataFromCSV(UYarnProgram* Program, const FString& CSVPath)
 {
-    // Run ysc again to get the list of source yarn files used in the compilation
-    FString StdOut;
-    FString StdErr;
-    int32 ReturnCode;
+	// similar to string table loading
+	FString CSVContent;
+	if (!FFileHelper::LoadFileToString(CSVContent, *CSVPath))
+	{
+		return;
+	}
 
-    const FString Params = FString::Printf(TEXT("list-sources %s"), InFilePath);
-    FPlatformProcess::ExecProcess(*YscPath(), *Params, &ReturnCode, &StdOut, &StdErr);
+	TArray<FString> Lines;
+	CSVContent.ParseIntoArrayLines(Lines);
 
-    if (ReturnCode != 0)
-    {
-        YS_ERR("Error getting .yarn source list: %s", *StdErr);
-        return false;
-    }
+	// metadata csv format varies, but typically: id,metadata
+	// we store it as-is for now
+	for (int32 i = 1; i < Lines.Num(); i++)
+	{
+		FString Line = Lines[i].TrimStartAndEnd();
 
-    StdOut.ParseIntoArrayLines(SourceFiles);
-    return true;
+		if (Line.IsEmpty())
+		{
+			continue;
+		}
+
+		int32 FirstComma;
+		if (Line.FindChar(TEXT(','), FirstComma))
+		{
+			FString LineID = Line.Left(FirstComma).TrimQuotes();
+			FString Metadata = Line.Mid(FirstComma + 1).TrimQuotes();
+
+			Program->LineMetadata.Add(LineID, Metadata);
+		}
+	}
 }
 
-
-bool UYarnAssetFactory::GetSourcesForProject(const UYarnProject* YarnProjectAsset, TArray<FString>& SourceFiles)
+FString UYarnAssetFactory::GetYscPath() const
 {
-    if (!YarnProjectAsset->AssetImportData)
-    {
-        YS_ERR("YarnProjectAsset has no AssetImportData");
-        return false;
-    }
-    return GetSourcesForProject(*YarnProjectAsset->AssetImportData->GetFirstFilename(), SourceFiles);
+	// ysc path is defined in build.cs via YSC_PATH macro
+	// fallback to looking in plugin directory if not defined
+
+#ifdef YSC_PATH
+	return YSC_PATH;
+#else
+	// fallback - look for ysc in plugin tools directory
+	FString PluginDir = FPaths::ConvertRelativePathToFull(
+		FPaths::ProjectPluginsDir() / TEXT("YarnSpinner")
+	);
+
+#if PLATFORM_WINDOWS
+	return PluginDir / TEXT("Tools/Win64/ysc.exe");
+#elif PLATFORM_MAC
+	return PluginDir / TEXT("Tools/Mac/ysc");
+#else
+	return TEXT("ysc"); // hope it's in PATH
+#endif
+#endif
 }
-
-
-void UYarnAssetFactory::BuildLocalizationTarget(const UYarnProject* YarnProject, const Yarn::CompilerOutput& CompilerOutput) const
-{
-
-    TOptional<FYarnProjectMetaData> ProjectMeta = FYarnProjectMetaData::FromAsset(YarnProject);
-    if (!ProjectMeta.IsSet())
-    {
-        YS_ERR("Failed to get project metadata from .yarnproject file.  Could not create/update localisation target.");
-        return;
-    }
-
-    const FString LocTargetName = YarnProject->GetName();
-    const FString LocTargetPath = FPaths::ProjectContentDir() / TEXT("Localization") / LocTargetName;
-
-    TArray<FString> Cultures;
-    ProjectMeta->localisation.GetKeys(Cultures);
-
-    // Find/create localisation target config, ensuring we add it to the correct target set
-    ULocalizationTarget* LocTarget = nullptr;
-    for (ULocalizationTarget* Target : ULocalizationSettings::GetGameTargetSet()->TargetObjects)
-    {
-        if (Target && Target->Settings.Name == LocTargetName)
-        {
-            YS_LOG("Found existing localisation target, updating...")
-            LocTarget = Target;
-            break;
-        }
-    }
-    if (!LocTarget)
-    {
-        YS_LOG("Did not find existing localisation target for '%s', creating new one", *LocTargetName)
-        LocTarget = NewObject<ULocalizationTarget>(ULocalizationSettings::GetGameTargetSet());
-        // Register with game target set
-        ULocalizationSettings::GetGameTargetSet()->TargetObjects.Add(LocTarget);
-    }
-
-    if (!LocTarget)
-    {
-        YS_ERR("Failed to create localisation target object for '%s'", *LocTargetName);
-        return;
-    }
-
-    // Set up config
-    FLocalizationTargetSettings& Settings = LocTarget->Settings;
-    Settings.Name = LocTargetName;
-    Settings.NativeCultureIndex = 0;
-    Settings.SupportedCulturesStatistics.Reset();
-    Settings.SupportedCulturesStatistics.Add({ProjectMeta->baseLanguage});
-    for (auto Culture : Cultures)
-    {
-        if (Culture != ProjectMeta->baseLanguage)
-        {
-            Settings.SupportedCulturesStatistics.Add({Culture});
-        }
-    }
-    Settings.CompileSettings.SkipSourceCheck = true;
-    Settings.GatherFromPackages.IsEnabled = false;
-    Settings.GatherFromMetaData.IsEnabled = false;
-    Settings.GatherFromTextFiles.IsEnabled = false;
-
-    // Generate config files (Config/Localization/MyTarget_*.ini)
-    LocTarget->SaveConfig();
-    LocalizationConfigurationScript::GenerateAllConfigFiles(LocTarget);
-
-    // Notify parent of change, which triggers loading the target settings in relevant caches and updating editor config and DefaultEditor.ini
-    FProperty* SettingsProp = LocTarget->GetClass()->FindPropertyByName(GET_MEMBER_NAME_CHECKED(ULocalizationTarget, Settings));
-    FPropertyChangedEvent ChangeEvent(SettingsProp, EPropertyChangeType::ValueSet);
-    LocTarget->PostEditChangeProperty(ChangeEvent);
-
-    // Set up localisation data (keys, source text and translations) as a localisation target manifest (source) and archives (translations)
-
-    FLocTextHelper LocTextHelper(LocTargetPath, FString::Printf(TEXT("%s.manifest"), *LocTargetName), FString::Printf(TEXT("%s.archive"), *LocTargetName), ProjectMeta->baseLanguage, Cultures, nullptr);
-
-    FText OutError;
-    // if (!LocTextHelper.LoadManifest(ELocTextHelperLoadFlags::LoadOrCreate, &OutError))
-    if (!LocTextHelper.LoadAll(ELocTextHelperLoadFlags::Create, &OutError))
-    {
-        YS_ERR("Could not create manifest & archive files for localisation target '%s': %s", *LocTargetName, *OutError.ToString());
-        return;
-    }
-    
-    FLocKey NamespaceKey{LocTargetName};
-
-    // Add lines to source text manifest
-    for (auto Pair : CompilerOutput.strings())
-    {
-        FString LineID = FString(Pair.first.c_str());
-        FString LineText = FString(Pair.second.text().c_str());
-        FManifestContext ManifestContext{FLocKey(LineID)};
-        ManifestContext.SourceLocation = YarnProject->GetPathName();
-        LocTextHelper.AddSourceText(NamespaceKey, FLocItem(LineText), ManifestContext);
-    }
-
-    // Add translations to archives
-    for (auto Loc : ProjectMeta->localisation)
-    {
-        FString Culture = Loc.Key;
-        FYarnProjectLocalizationData LocData = Loc.Value;
-        FString LocFile = FPaths::Combine(YarnProject->YarnProjectPath(), LocData.strings);
-        FPaths::NormalizeFilename(LocFile);
-        FPaths::CollapseRelativeDirectories(LocFile);
-        FPaths::RemoveDuplicateSlashes(LocFile);
-        FString LocFileData;
-
-        if (!FFileHelper::LoadFileToString(LocFileData, *LocFile))
-        {
-            YS_WARN("Couldn't load strings file '%s' for locale '%s'", *LocFile, *Culture)
-            continue;
-        }
-
-        const FCsvParser Parser(LocFileData);
-        const FCsvParser::FRows& Rows = Parser.GetRows();
-        if (Rows.Num() < 2)
-        {
-            YS_WARN("Empty strings file: %s", *LocFile)
-            continue;
-        }
-
-        const auto& HeaderRow = Rows[0];
-        TMap<FString, int32> HeaderMap;
-        for (int32 I = 0; I < HeaderRow.Num(); ++I)
-        {
-            HeaderMap.Add(WCHAR_TO_TCHAR(HeaderRow[I]), I);
-        }
-        // Test for required columns
-        if (!HeaderMap.Contains(TEXT("text")) || !HeaderMap.Contains(TEXT("id")))
-        {
-            YS_ERR("Missing required column 'id' or 'text' in strings file: %s", *LocFile)
-            continue;
-        }
-
-        for (int32 I = 1; I < Rows.Num(); ++I)
-        {
-            const auto& Row = Rows[I];
-            const FString& LineID = WCHAR_TO_TCHAR(Row[HeaderMap[TEXT("id")]]);
-            const FString& LineText = WCHAR_TO_TCHAR(Row[HeaderMap[TEXT("text")]]);
-            const FString& LineCharacter = HeaderMap.Contains(TEXT("character")) ? WCHAR_TO_TCHAR(Row[HeaderMap[TEXT("character")]]) : TEXT("");
-
-            auto Source = LocTextHelper.FindSourceText(NamespaceKey, FLocKey(LineID));
-
-            FLocItem SourceText = Source.IsValid() ? Source->Source : FLocItem();
-            FLocItem Translation((!LineCharacter.IsEmpty() ? LineCharacter + TEXT(": ") : TEXT("")) + LineText);
-
-            const auto LocEntry = MakeShared<FArchiveEntry>(NamespaceKey, FLocKey(LineID), SourceText, Translation, nullptr, false);
-
-            LocTextHelper.AddTranslation(Culture, LocEntry);
-        }
-    }
-
-    FText OutErr;
-    if (!LocTextHelper.SaveAll(&OutErr))
-    {
-        YS_ERR("Could not save localization target text data '%s': %s", *LocTargetName, *OutErr.ToString());
-        return;
-    }
-
-    // Update word count
-    auto TimeStamp = FDateTime::UtcNow();
-    FLocTextWordCounts WordCountReport = LocTextHelper.GetWordCountReport(TimeStamp);
-    LocTextHelper.SaveWordCountReport(TimeStamp, LocalizationConfigurationScript::GetWordCountCSVPath(LocTarget));
-    LocTarget->UpdateWordCountsFromCSV();
-
-    CompileTexts(LocTarget);
-    
-    // Done!
-    YS_LOG("Localisation target '%s' created successfully", *LocTargetName)
-}
-
-
-void UYarnAssetFactory::CompileTexts(const ULocalizationTarget* LocalizationTarget)
-{
-    // This version launches the text compilation commandlet in a separate process.  To implement this directly instead, see GenerateTextLocalizationResourceCommandlet.cpp
-    
-    YS_LOG("Compiling texts for localization target %s...", *LocalizationTarget->Settings.Name);
-    
-    const FString ConfigFilePath = FPaths::Combine(FPaths::SourceConfigDir(), TEXT("Localization"), FString::Printf(TEXT("%s_Compile.ini"), *LocalizationTarget->Settings.Name));
-
-    TSharedPtr<FLocalizationCommandletProcess> CommandletProcessHandle = FLocalizationCommandletProcess::Execute(ConfigFilePath, !LocalizationTarget->IsMemberOfEngineTargetSet());
-
-    if (!CommandletProcessHandle.IsValid())
-    {
-        YS_ERR("Failed to launch GenerateTextLocalizationResource commandlet");
-        return;
-    }
-
-    FString Out;
-    // Wait for the process to complete
-    for(;;)
-    {
-        // Read from pipe.
-        const FString PipeString = FPlatformProcess::ReadPipe(CommandletProcessHandle->GetReadPipe());
-
-        // Process buffer.
-        if (!PipeString.IsEmpty())
-        {
-            Out += PipeString;
-        }
-
-        // If the process isn't running and there's no data in the pipe, we're done.
-        if (!FPlatformProcess::IsProcRunning(CommandletProcessHandle->GetHandle()) && PipeString.IsEmpty())
-        {
-            break;
-        }
-
-        // Sleep.
-        FPlatformProcess::Sleep(0.0f);
-    }
-    
-    YS_LOG("GenerateTextLocalizationResourceCommandlet output log:\n%s", *Out)
-    
-    int32 ReturnCode = 0;
-    if (!FPlatformProcess::GetProcReturnCode(CommandletProcessHandle->GetHandle(), &ReturnCode) || ReturnCode != 0)
-    {
-        YS_ERR("Failed to compile texts for %s", *LocalizationTarget->Settings.Name);
-        return;
-    }
-    
-    YS_LOG("%s texts compiled successfully", *LocalizationTarget->Settings.Name);
-}
-

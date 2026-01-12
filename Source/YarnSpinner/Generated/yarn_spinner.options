@@ -1,0 +1,19 @@
+# nanopb options for yarn_spinner.proto
+
+# use static strings with max_size instead of callbacks
+# this makes string fields easier to access
+Yarn.Instruction.RunLineInstruction.lineID max_size:64
+Yarn.Instruction.RunCommandInstruction.commandText max_size:256
+Yarn.Instruction.AddOptionInstruction.lineID max_size:64
+Yarn.Instruction.PushStringInstruction.value max_size:256
+Yarn.Instruction.PushVariableInstruction.variableName max_size:64
+Yarn.Instruction.StoreVariableInstruction.variableName max_size:64
+Yarn.Instruction.CallFunctionInstruction.functionName max_size:64
+Yarn.Instruction.RunNodeInstruction.nodeName max_size:64
+Yarn.Instruction.DetourToNodeInstruction.nodeName max_size:64
+Yarn.Instruction.PeekAndRunNodeInstruction.nodeName max_size:64
+Yarn.Instruction.AddSaliencyCandidateInstruction.contentID max_size:64
+Yarn.Instruction.AddSaliencyCandidateFromNodeInstruction.nodeName max_size:64
+
+# rename c++ keywords
+Yarn.Instruction.return field_name_override:return_inst
