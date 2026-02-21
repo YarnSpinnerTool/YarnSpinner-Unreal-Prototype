@@ -18,7 +18,7 @@ THIRD_PARTY_INCLUDES_END
 
 void UnrealLogHandler(google::protobuf::LogLevel level, const char* filename, int line,
                         const std::string& message) {
-	UE_LOG(LogYarnSpinner, Warning, TEXT("Protobuf: %s"), message.c_str());
+	UE_LOG(LogYarnSpinner, Warning, TEXT("Protobuf: %hs"), message.c_str());
 }
 
 

@@ -280,7 +280,7 @@ void ADialogueRunner::SelectOption(UOption* Option)
 
     VirtualMachine->SetSelectedOption(Option->OptionID);
 
-    if (bRunLinesForSelectedOptions)
+    if (bRunSelectedOptionsAsLines)
     {
         const TArray<TSoftObjectPtr<UObject>> LineAssets = YarnProject->GetLineAssets(Option->Line->LineID);
         YS_LOG_FUNC("Got %d line assets for line '%s'", LineAssets.Num(), *Option->Line->LineID.ToString())
@@ -377,7 +377,7 @@ void ADialogueRunner::GetDisplayTextForLine(ULine* Line, const Yarn::Line& YarnL
         return;
     }
 
-    const FText LocalisedDisplayText = FText::FromString(FTextLocalizationManager::Get().GetDisplayString({YarnProject->GetName()}, {LineID.ToString()}, nullptr).Get());
+    const FText LocalisedDisplayText = FText::FromString(YarnProject->Lines[LineID]);
 
     const FText NonLocalisedDisplayText = FText::FromString(YarnProject->Lines[LineID]);
 
