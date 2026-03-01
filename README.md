@@ -1,5 +1,9 @@
 # Yarn Spinner for Unreal
 
+> [!IMPORTANT]
+> Please visit the new version of this plugin here: https://github.com/YarnSpinnerTool/YarnSpinner-UnrealEngine
+> This repository is maintained for archival purposes, but is not complete, and not compatible with the latest features of Yarn Spinner.
+
 <img src="https://downloads.yarnspinner.dev/get/YarnSpinnerLogo.png" alt="Yarn Spinner logo" width="100px;" align="right">
 
 Welcome to **Yarn Spinner for Unreal!** Yarn Spinner is the friendly dialogue tool that makes it easy for writers to create content, and has powerful features for programmers.
